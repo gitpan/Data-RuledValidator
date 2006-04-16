@@ -1,5 +1,10 @@
 Revision history for Perl extension Data::RuledValidator.
 
+0.02  Sat Apr 171 00:53:00 2006
+	- use Module::Pluggable
+	- move Email validation to plugin.
+	- add option import_error when using module.
+
 0.01  Sat Mar 11 21:19:00 2006
 	- original version;
 

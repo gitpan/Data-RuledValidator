@@ -1,10 +1,11 @@
 package Data::RuledValidator;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 use strict;
 use warnings "all";
-use Email::Valid ();
+
+use Module::Pluggable search_path => [qw/Data::RuledValidator::Plugin/];
 
 use overload 
   '""'  => \&valid,
@@ -19,14 +20,19 @@ my %COND_OP;
 # create closure
 my %MK_CLOSURE;
 
-__PACKAGE__->add_condition_operator
-  (
-   'mail'     => sub{my($self, $v) = @_; return Email::Valid->address($v) ? 1 : 0},
-   'num'      => sub{my($self, $v) = @_; return $v =~/^\d+$/},
-   'alpha'    => sub{my($self, $v) = @_; return $v =~/^[a-zA-Z]+$/},
-   'alphanum' => sub{my($self, $v) = @_; return $v =~/^[a-zA-Z0-9]+$/},
-   'word'     => sub{my($self, $v) = @_; return $v =~/^\w+$/},
-  );
+sub import{
+  my($class, %option) = @_;
+  foreach my $plugin (__PACKAGE__->plugins){
+    eval"CORE::require $plugin";
+    if($@ and my $er = $option{import_error}){
+      if($er == 1){
+        warn "Plugin import Error: $plugin - $@";
+      }else{
+        die  "Plugin import Error: $plugin - $@";
+      }
+    }
+  }
+}
 
 sub _cond_op{ my $self = shift; return @_ ? $COND_OP{shift()} : keys %COND_OP};
 
@@ -73,7 +79,13 @@ sub new{
   $option{result} = {};
   $option{valid}  = 0;
   $option{rule} ||= '';
-  return bless \%option, $class;
+  my $o = bless \%option, $class;
+  return $o;
+}
+
+sub list_plugins{
+  my($self) = @_;
+  return $self->plugins;
 }
 
 sub obj{ shift()->{obj} };
@@ -267,6 +279,7 @@ You can use this without rule file.
  }
  
  use Data::RuledValidator;
+
  use CGI;
  
  my $v = Data::RuledValidator->new(obj => CGI->new, method => "param");
@@ -306,7 +319,7 @@ use rule in "index". Why using CGI object? you have to check new's arguments.
  all of i, k, v
 
 Global rule is applied as well.
- 
+
  i is number
  k is word
  v is word
@@ -337,6 +350,30 @@ Operator is operator to check Value(s).
 =item * Condition
 
 Condition is the condition for Operator to judge whether Value(s) is/are valid or not.
+
+=back
+
+=head1 USING OPTION
+
+When using Data::RuledValidator, you can use option.
+
+=over 4
+
+=item import_error
+
+This defines behavior when plugin is not inported correctly.
+
+ use Data::RuledValidator import_error => 0;
+
+If value is 0, do nothing. It is default.
+
+ use Data::RuledValidator import_error => 1;
+
+If value is 1, warn.
+
+ use Data::RuledValidator import_error => 2;
+
+If value is 2, die.
 
 =back
 
@@ -428,7 +465,7 @@ Rule Syntax is very simple.
 
 =item ID_KEY Key
 
-The right value is key which is pased Object->Method.
+The right value is key which is pased to Object->Method.
 The returned value of Object->Method(Key) is used to identify id_key_value.
 
  ID_KEY page
@@ -440,7 +477,7 @@ If the value of Object->Method(ID_KEY) is equal id_key_value, this group validat
 
  ;index
 
-=item ;r;^id_key_value$ (yet not implemented)
+=item ;r;^id_key_value$ (not yet implemented)
 
 This is start of group, too.
 If the value of Object->Method(ID_KEY) is match id_key_value, this group validation rule is used.
@@ -669,6 +706,39 @@ __PACKAGE__->add_condition_operator
 
 =back
 
+=head1 PLUGIN
+
+Data::RuledValidator is made with plugins (from version 0.02).
+
+=head2 How to create plugins
+
+It's very easy. The name of the modules plugged in this is started from 'Data::RuledValidator::'.
+
+for example:
+
+ package Data::RuledValidator::Plugin::Email;
+ 
+ use Email::Valid;
+ use Email::Valid::Loose;
+ 
+ Data::RuledValidator->add_condition_operator
+   (
+    'mail' =>
+    sub{
+      my($self, $v) = @_;
+      return Email::Valid->address($v) ? 1 : ()
+    },
+    'mail_loose' =>
+    sub{
+      my($self, $v) = @_;
+      return Email::Valid::Loose->address($v) ? 1 : ()
+    },
+   );
+ 
+ 1;
+
+That's all. If you want to add normal_operator, use add_operator Class method.
+
 =head1 OVERLOADING
 
  $valid = $validator_object;  # it is as same as $validator_object->valid;
@@ -690,9 +760,7 @@ store code to storable file. store code to shared memory.
 
 =over 4
 
-=item plugin
-
-This module is easy to extend. so I add plugin function to this.
+=item can 2 keys for id_key
 
 =item More test
 
