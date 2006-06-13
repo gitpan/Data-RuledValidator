@@ -1,10 +1,23 @@
 Revision history for Perl extension Data::RuledValidator.
 
-0.02  Sat Apr 171 00:53:00 2006
+0.03  Sun Jun 14 00:19:00 2006
+	- if rule is changed, re-parse it.
+	- now regex group name can be used.
+        - PATH_INFO group name can be used, easily.
+	- fix bug: comment couldn't be used.
+	- add strict option which effects valid behabior
+	  no strict and no failure, it is valid.
+	- add id_method, id_obj method.
+          for using another obj/method to identify GROUP_NAME.
+	- specify multiple methods for nested calling.
+       	- change some in doc.
+          id_key_value -> GROUP_NAME, etc.
+	- add test for pod.
+
+0.02  Sat Apr 17 00:53:00 2006
 	- use Module::Pluggable
 	- move Email validation to plugin.
 	- add option import_error when using module.
 
 0.01  Sat Mar 11 21:19:00 2006
 	- original version;
-

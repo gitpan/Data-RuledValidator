@@ -44,3 +44,4 @@ ok(not $v->ok('all_valid'));
 ok(not $v->valid);
 $v->reset;
 ok(! $v);
+

@@ -2,8 +2,14 @@ Changes
 Makefile.PL
 MANIFEST
 README
-t/Data-RuledValidator.t
-t/Email-Valid-Loose.t
+t/sentence-cgi.t
+t/sentence-object.t
+t/mail.t
+t/pod.t
+t/rule.t
+t/original.rule
+t/original-2.rule
+
 lib/Data/RuledValidator.pm
 lib/Data/RuledValidator/Closure.pm
 lib/Data/RuledValidator/Plugin/Core.pm

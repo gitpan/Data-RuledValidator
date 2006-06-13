@@ -5,7 +5,7 @@ use warnings;
 use Carp;
 use Email::Valid ();
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 Data::RuledValidator->add_condition_operator
   (
@@ -14,6 +14,7 @@ Data::RuledValidator->add_condition_operator
    'alphanum' => sub{my($self, $v) = @_; return $v =~/^[a-zA-Z0-9]+$/},
    'word'     => sub{my($self, $v) = @_; return $v =~/^\w+$/},
    'any'      => sub{my($self, $v) = @_; return defined $v},
+   'null'     => sub{my($self, $v) = @_; return not defined $v or $v eq ''},
   );
 
 1;

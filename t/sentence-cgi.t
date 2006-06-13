@@ -3,7 +3,7 @@ use Test::More 'no_plan';
 BEGIN {
   use_ok('Data::RuledValidator');
   $ENV{REQUEST_METHOD} = "GET";
-  $ENV{QUERY_STRING} = "page=index&i=9&v=aaaaa&k=bbbb";
+  $ENV{QUERY_STRING} = "page=index&i=9&v=aaaaa&k=bbbb&m=1&m=2&m=4&m=5";
 }
 
 use CGI;
@@ -15,23 +15,30 @@ is($v->obj, $q);
 is($v->method, 'param');
 
 # correct rule
-ok($v->by_sentence('page is word', 'i is num', 'v is word', 'k is word', 'all of i k v'));
-ok($v->ok('page_is'));
-ok($v->ok('i_is'));
-ok($v->ok('k_is'));
-ok($v->ok('all_of'));
-ok($v->ok('page_valid'));
-ok($v->ok('i_valid'));
-ok($v->ok('k_valid'));
-ok($v->ok('all_valid'));
-ok($v->valid);
+ok($v->by_sentence('page is word', 'i is num', 'v is word', 'k is word',  'i re ^\d+$', 'all of i k v', 'm has 4', 'm < 6', 'm > 0', 'all of-valid i k v'), 'by sentence');
+ok($v->ok('page_is'), 'page_is');
+ok($v->ok('i_is'), 'i_is');
+ok($v->ok('i_re'), 'i_re');
+ok($v->ok('k_is'), 'k_is');
+ok($v->ok('all_of'), 'all_of');
+ok($v->ok('page_valid'), 'page_valid');
+ok($v->ok('i_valid'), 'i_valid');
+ok($v->ok('k_valid'), 'k_valid');
+ok($v->ok('all_valid'), 'all_valid');
+ok($v->ok('m_has'), 'm_has');
+ok($v->ok('m_<'), 'm_<');
+ok($v->ok('m_>'), 'm_>');
+ok($v->ok('all_of-valid'), 'all_of-valid');
+ok($v->valid, 'valid');
+# warn join "\n", @$v;
 $v->reset;
-ok(! $v);
+ok(! $v, 'reseted valid; it should be undef');
 
 # mistake rule
-ok(not $v->by_sentence('page is num', 'i is num', 'v is num', 'k is num', 'all of i k v x'));
+ok(not $v->by_sentence('page is num', 'i is num', 'v is num', 'k is num',  'v re ^\d+$', 'all of i k v x'));
 ok(not $v->ok('page_is'));
 ok($v->ok('i_is'));
+ok(not $v->ok('v_re'));
 ok(not $v->ok('k_is'));
 ok(not $v->ok('all_of'));
 ok(not $v->ok('page_valid'));

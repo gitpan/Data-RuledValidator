@@ -1,6 +1,6 @@
 package Data::RuledValidator::Plugin::EmailLoose;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 use Email::Valid::Loose;
 
@@ -16,7 +16,7 @@ __END__
 
 =head1 NAME
 
-Data::RuledValidator::Plugin::Email - use Email::Valid::Loose
+Data::RuledValidator::Plugin::EmailLoose - use Email::Valid::Loose
 
 =head1 DESCRIPTION
 
