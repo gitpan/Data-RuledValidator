@@ -1,6 +1,6 @@
 package Data::RuledValidator;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 use strict;
 use warnings "all";
@@ -72,7 +72,7 @@ sub add_operator{
   my($self, %op_sub) = @_;
   while(my($op, $sub) = each %op_sub){
     if($MK_CLOSURE{$op}){
-      Carp::croak("$op has alredy defined as normal operator.");
+      Carp::croak("$op has already defined as normal operator.");
     }
     $MK_CLOSURE{$op} = $sub;
   }
@@ -82,7 +82,7 @@ sub add_condition_operator{
   my($self, %op_sub) = @_;
   while(my($op, $sub) = each %op_sub){
     if(defined $COND_OP{$op}){
-      Carp::croak("$op is alredy defined as condition operator.");
+      Carp::croak("$op is already defined as condition operator.");
     }
     $COND_OP{$op} = $sub;
   }
@@ -91,7 +91,7 @@ sub add_condition_operator{
 sub create_alias_operator{
   my($self, $alias, $original) = @_;
   if($MK_CLOSURE{$alias}){
-    Carp::croak("$alias has alredy defined as context/normal operator.");
+    Carp::croak("$alias has already defined as context/normal operator.");
   }elsif(not $MK_CLOSURE{$original}){
     Carp::croak("$original is not defined as context/normal operator.");
   }
@@ -101,7 +101,7 @@ sub create_alias_operator{
 sub create_alias_cond_operator{
   my($self, $alias, $original) = @_;
   if($COND_OP{$alias}++){
-    Carp::croak("$alias has alredy defined as condition operator.");
+    Carp::croak("$alias has already defined as condition operator.");
   }
   $COND_OP{$alias} = $COND_OP{$original};
 }
@@ -319,9 +319,6 @@ sub valid_ok{ return shift()->{result}->{shift() . '_valid'}}
 use Data::RuledValidator::Closure;
 
 1;
-__END__
-
-=pod
 
 =head1 NAME
 
@@ -338,16 +335,16 @@ One programmer said;
 
  specification is in code, so documentation is not needed.
 
-Another programmer said;
+Another programmers said;
 
  code is specification, so if I write specification, it is against DRY.
 
-It is execuse of them. They may dislike to write documents, they may be not good at writinng documents,
+It is excuse of them. They may dislike to write documents, they may be not good at writing documents,
 and/or they may think validation check is trivial task.
 But, if specification is used by programming and we needn't write program,
 they will start to write specification. And, at last, we need specification.
 
-=head1 SYNOPSYS
+=head1 SYNOPSIS
 
 You can use this without rule file.
 
@@ -363,7 +360,7 @@ You can use this without rule file.
  my $v = Data::RuledValidator->new(obj => CGI->new, method => "param");
  print $v->by_sentence("i is num", "k is word", "v is word", "all of i,v,k");  # return 1 if valid
 
-This means that parameater of CGI object, i is number, k is word, v is also word and needs all of i, v and k.
+This means that parameter of CGI object, i is number, k is word, v is also word and needs all of i, v and k.
 
 Next example is using following rule;
 
@@ -383,7 +380,7 @@ And code is(environmental values are as same as first example):
  my $v = Data::RuledValidator->new(obj => CGI->new, method => "param", rule => "validator.rule");
  print $v->by_rule; # return 1 if valid
 
-This is as nealy same as first example.
+This is as nearly same as first example.
 left value of ID_KEY, "page" is parameter name to specify rule name to use.
 
  my $q = CGI->new;
@@ -440,7 +437,7 @@ When using Data::RuledValidator, you can use option.
 
 =item import_error
 
-This defines behavior when plugin is not inported correctly.
+This defines behavior when plugin is not imported correctly.
 
  use Data::RuledValidator import_error => 0;
 
@@ -498,10 +495,10 @@ explained above.
 
  strict => 0
 
-Before 0.06, Data::RuledValidator returns true with valid method,
+Before 0.03, Data::RuledValidator returns true with valid method,
 only when all key is valid.
 It means you need set "key is n/a",
-if you don't use keys defined in GLOABAL in other group.
+if you don't use keys defined in GLOBAL in other group.
 I think it is very bother.
 
 I will change it in future. At present, if strict is 0(it's default),
@@ -519,15 +516,15 @@ But, if you reset, it returns undef.
  $v->by_sentence("i is number", "k is word", ...);
 
 The arguments is rule. You can write multiple sentence.
-It returnes $v object.
+It returns $v object.
 
 =item by_rule
 
  $v->by_rule();
  $v->by_rule($rule);
 
-If $rule is ommitted, using the file which is specified in new.
-It returnes $v object.
+If $rule is omitted, using the file which is specified in new.
+It returns $v object.
 
 =item result
 
@@ -559,7 +556,7 @@ You can get this result as following:
 The result of total validation check.
 The returned value is 1 or 0.
 
-If all rule is ok, valid is 1.
+If all rule is OK, valid is 1.
 If not, valid is 0.
 
 You can get this result as following:
@@ -602,7 +599,7 @@ All of them are wrong values.
 
  $v->reset();
 
-The result of validation check is resetted.
+The result of validation check is reseted.
 
 =back
 
@@ -626,7 +623,7 @@ Rule Syntax is very simple.
 
 =item ID_KEY Key
 
-The right value is key which is pased to Object->Method.
+The right value is key which is passed to Object->Method.
 The returned value of Object->Method(Key) is used to identify GROUP_NAME
 
  ID_KEY page
@@ -636,7 +633,7 @@ The returned value of Object->Method(Key) is used to identify GROUP_NAME
 Note that: It is used, only when you need another method to identify to GROUP_NAME.
 
 The right value is method which is used when Object->Method.
-The returned value of Object->Method(Key)/Object->Method (Key is ommited)
+The returned value of Object->Method(Key)/Object->Method (Key is omitted)
 is used to identify GROUP_NAME.
 
  ID_METHOD request action
@@ -655,7 +652,7 @@ You can write as following.
  {index}
  ;;;;index
 
-You can repeat ';' anytimes.
+You can repeat ';' any times.
 
 =item ;r;^GROUP_NAME$
 
@@ -669,7 +666,7 @@ You can write as following.
  r{^*_confirm$}
  ;;r;;^.*_confirm$
 
-You can repeat ';' anytimes.
+You can repeat ';' any times.
 
 =item ;path;/path/to/where
 
@@ -682,7 +679,7 @@ You can write as following.
 path{/path/to/where}
 ;;path;;/path/to/where
 
-You can repeat ';' anytimes.
+You can repeat ';' any times.
 
 =item ;GLOBAL
 
@@ -702,7 +699,7 @@ no need specify ;GLOBAL, they are parsed as GLOBAL.
  i is number
  w is word
 
-They will be reagrded as global rule.
+They will be regarded as global rule.
 
 =item #
 
@@ -724,7 +721,7 @@ This means:
 
  return $obj->$method('i') =~/^\d+$/ + 0;
 
-In some case, Operatior can take multiple Condition.
+In some case, Operator can take multiple Condition.
 It is depends on Operator implementation.
 
 For example, Operator 'match' can multiple Condition.
@@ -802,7 +799,7 @@ If you want delete all GLOBAL rule in 'index' group.
 
  ;index
 
- GLOABAL is n/a
+ GLOBAL is n/a
 
 =back
 
@@ -819,7 +816,7 @@ If you want delete all GLOBAL rule in 'index' group.
 'is' is something special operator.
 It can be to be unavailable GLOBAL at all or about some key.
 
- ;;GLOABAL
+ ;;GLOBAL
  i is number
  k is value
 
@@ -844,7 +841,7 @@ This inherits 'i', but doesn't inherit 'k'.
 =item isnt
 
 It is the opposite of 'is'.
-but, no use to use 'n/a' in conidition.
+but, no use to use 'n/a' in condition.
 
 =item of
 
@@ -855,7 +852,7 @@ Left word is not key. number or 'all'.
 
 This is needed all of keys x, y and z.
 It is no need for these value of keys to be valid.
-If this key is exists, it is OK.
+If this key exists, it is OK.
 
 If you need only 2 of these keys. you can write;
 
@@ -973,7 +970,7 @@ This is used in sentence.
      ~~~~~~~~
 For example: is, are, match ...
 
-"v is word" returns strucutre like a following:
+"v is word" returns structure like a following:
 
  {
    v_is => 1,
@@ -989,13 +986,13 @@ This is used in sentence only when Operator is 'is/are/isnt/arent'.
    (isnt/arent)
 
 This is operator which is used for checking Value(s).
-Operator should be 'is' or 'are'(thease are same) or 'isnt or arent'(thease are same).
+Operator should be 'is' or 'are'(these are same) or 'isnt or arent'(these are same).
 
 For example: num, alpha, alphanum, word ...
 
 =back
 
-You can add these opeartor with 2 class method.
+You can add these operator with 2 class method.
 
 =over 4
 
@@ -1015,7 +1012,7 @@ For example:
        if($c eq 'n/a'){
          return $c;
        }else{
-         Carp::croak("$c is not defined. you can use; " . join ", ", Data::RuledValidaotr->cond_op);
+         Carp::croak("$c is not defined. you can use; " . join ", ", Data::RuledValidaotr->_cond_op);
        }
      }
      return sub {my($self, $v) = @_; $v = shift @$v; return($sub->($self, $v) + 0)};
@@ -1056,7 +1053,7 @@ __PACKAGE__->add_condition_operator
 
 =head1 PLUGIN
 
-Data::RuledValidator is made with plugins (from version 0.02).
+Data::RuledValidator is made with plugins (since version 0.02).
 
 =head2 How to create plugins
 
@@ -1092,7 +1089,7 @@ That's all. If you want to add normal_operator, use add_operator Class method.
  $valid = $validator_object;  # it is as same as $validator_object->valid;
  %valid = @$validator_object; # it is as same as %{$validator_object->result};
 
-=head1 INTERANL CLASS DATA
+=head1 INTERNAL CLASS DATA
 
 It is just a memo.
 
@@ -1123,7 +1120,7 @@ structure:
 
 The keys are condition operator names. The values is coderef(condition operator).
 
-=item %ML_CLOSSURE
+=item %MK_CLOSURE
 
  {operator => sub{coderef which create closure} }
 

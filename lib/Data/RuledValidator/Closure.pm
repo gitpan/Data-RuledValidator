@@ -9,7 +9,7 @@ my $parent = 'Data::RuledValidator';
 
 use constant 
   {
-    IS => sub { # now this is not used, using are instead.
+    IS => sub { # now this is not used, using ARE instead.
       my($key, $c) = @_;
       my $sub = $parent->_cond_op($c) || '';
       unless($sub){
@@ -21,7 +21,7 @@ use constant
       }
       return sub {my($self, $v) = @_; $v = shift @$v; return ($sub->($self, $v) + 0)};
     },
-    ISNT => sub { # now this is not used, using are instead.
+    ISNT => sub { # now this is not used, using ARENT instead.
       my($key, $c) = @_;
       my $sub = $parent->_cond_op($c);
       unless($sub){
