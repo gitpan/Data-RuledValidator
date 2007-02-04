@@ -1,6 +1,6 @@
 package Data::RuledValidator::Plugin::EmailLoose;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use Email::Valid::Loose;
 
@@ -26,11 +26,11 @@ Data::RuledValidator::Plugin::EmailLoose - use Email::Valid::Loose
 
 =head1 Author
 
-Ktat, E<lt>atusi@pure.ne.jpE<gt>
+Ktat, E<lt>ktat@cpan.orgE<gt>
 
 =head1 Copyright
 
-Copyright 2006 by Ktat
+Copyright 2006-2007 by Ktat
 
 This program is free software; you can redistribute it
 and/or modify it under the same terms as Perl itself.

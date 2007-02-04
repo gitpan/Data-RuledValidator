@@ -15,7 +15,7 @@ is($v->obj, $q);
 is($v->method, 'param');
 
 # correct rule
-ok($v->by_sentence('page is word', 'i is num', 'v is word', 'k is word',  'i re ^\d+$', 'all of i k v', 'm has 4', 'm < 6', 'm > 0', 'all of-valid i k v'), 'by sentence');
+ok($v->by_sentence('page is word', 'i is num', 'v is word', 'k is word',  'i re ^\d+$', 'all of i, k, v', 'm has 4', 'm < 6', 'm > 0', 'all of-valid i, k, v'), 'by sentence');
 ok($v->ok('page_is'), 'page_is');
 ok($v->ok('i_is'), 'i_is');
 ok($v->ok('i_re'), 'i_re');
@@ -35,7 +35,7 @@ $v->reset;
 ok(! $v, 'reseted valid; it should be undef');
 
 # mistake rule
-ok(not $v->by_sentence('page is num', 'i is num', 'v is num', 'k is num',  'v re ^\d+$', 'all of i k v x'));
+ok(not $v->by_sentence('page is num', 'i is num', 'v is num', 'k is num',  'v re ^\d+$', 'all of i, k, v, x'));
 ok(not $v->ok('page_is'));
 ok($v->ok('i_is'));
 ok(not $v->ok('v_re'));
@@ -52,7 +52,7 @@ ok(! $v);
 # create alias
 Data::RuledValidator->create_alias_operator('isis', 'is');
 Data::RuledValidator->create_alias_cond_operator('number', 'num');
-ok(not $v->by_sentence('page is num', 'i isis num', 'v is number', 'k isis num', 'all of i k v x'));
+ok(not $v->by_sentence('page is num', 'i isis num', 'v is number', 'k isis num', 'all of i, k, v, x'));
 ok(not $v->ok('page_isis'));
 ok($v->ok('i_isis'));
 ok(not $v->ok('k_isis'));

@@ -1,10 +1,12 @@
 use Test::More 'no_plan';
 
+use lib qw(t/lib/);
+
 BEGIN {
   use_ok('Data::RuledValidator');
   # use_ok('Data::RuledValidator::Plugin::EmailLoose');
   $ENV{REQUEST_METHOD} = "GET";
-  $ENV{QUERY_STRING} = 'page=index&lm=atusi@pure.ne.jp&lm2=h.@docomo.ne.jp&lm3=test@test.jp&lm4=t@docomo.ne.jp';
+  $ENV{QUERY_STRING} = 'page=index&lm=ktat@cpan.org&lm2=h.@docomo.ne.jp&lm3=test@test.jp&lm4=t@docomo.ne.jp';
 }
 
 use CGI;
@@ -16,7 +18,7 @@ is($v->obj, $q);
 is($v->method, 'param');
 
 # correct rule
-ok($v->by_sentence('page is word', 'lm is mail_loose', 'lm2 is mail_loose', 'lm3 is mail_loose', 'all of lm lm2'));
+ok($v->by_sentence('page is word', 'lm is mail_loose', 'lm2 is mail_loose', 'lm3 is mail_loose', 'all of lm, lm2'));
 ok($v->ok('page_is'));
 ok($v->ok('lm_is'));
 ok($v->ok('lm2_is'));
@@ -32,7 +34,7 @@ $v->reset;
 ok(! $v);
 
 # mistake rule
-ok(not $v->by_sentence('page is num', 'lm is num', 'lm2 is num', 'all of lm lm2 lm3 lm4 lm5'));
+ok(not $v->by_sentence('page is num', 'lm is num', 'lm2 is num', 'all of lm, lm2, lm3, lm4, lm5'));
 ok(not $v->ok('page_is'));
 ok(not $v->ok('lm_is'));
 ok(not $v->ok('lm2_is'));

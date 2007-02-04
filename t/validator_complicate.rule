@@ -1,0 +1,33 @@
+;;GLOBAL
+
+ID_KEY page
+
+page is alpha
+
+;;registration
+
+first_name  is alpha
+last_name   is alpha
+age         is num
+sex         in "male","female"
+hobby       in "programming","outdoor", "camp"
+
+birth_year  is num
+birth_month is num
+birth_day   is num
+all         of birth_year, birth_month, birth_day
+
+favorite       in "books","music"
+favorite_books is words
+favorite_music is words
+
+must_select3 has 3
+must_select1 has 1
+must_gt_1000 > 1000
+must_lt_1000 < 1000
+must_in_1_10 between 1,10
+
+length_in_10 <= ~ 10
+
+regex        match ^abc, def$, ^abcdef$
+

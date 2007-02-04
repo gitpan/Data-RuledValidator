@@ -8,5 +8,5 @@ WriteMakefile(
     PREREQ_PM         => {Email::Valid => 0.15, Email::Valid::Loose => 0.04}, # e.g., Module::Name => 1.1
     ($] >= 5.005 ?     ## Add these new keywords supported since 5.005
       (ABSTRACT_FROM  => 'lib/Data/RuledValidator.pm', # retrieve abstract from module
-       AUTHOR         => 'Ktat <atusi@pure.ne.jp>') : ()),
+       AUTHOR         => 'Ktat <ktat@cpan.org>') : ()),
 );

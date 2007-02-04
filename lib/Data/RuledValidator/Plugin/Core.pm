@@ -5,7 +5,7 @@ use warnings;
 use Carp;
 use Email::Valid ();
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 Data::RuledValidator->add_condition_operator
   (
@@ -15,6 +15,7 @@ Data::RuledValidator->add_condition_operator
    'word'     => sub{my($self, $v) = @_; return $v =~/^\w+$/},
    'any'      => sub{my($self, $v) = @_; return defined $v},
    'null'     => sub{my($self, $v) = @_; return not defined $v or $v eq ''},
+   'words'    => sub{my($self, $v) = @_; return $v =~/^[\w\s]+$/},
   );
 
 1;
@@ -38,11 +39,11 @@ Data::RuledValidator::Plugin::Core - Data::RuldedValidator core plugins
 
 =head1 AUTHOR
 
-Ktat, E<lt>atusi@pure.ne.jpE<gt>
+Ktat, E<lt>ktat@cpan.orgE<gt>
 
 =head1 COPYRIGHT
 
-Copyright 2006 by Ktat
+Copyright 2006-2007 by Ktat
 
 This program is free software; you can redistribute it
 and/or modify it under the same terms as Perl itself.

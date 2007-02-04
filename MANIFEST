@@ -9,10 +9,15 @@ t/pod.t
 t/rule.t
 t/original.rule
 t/original-2.rule
+t/rule-complicate.t
+t/validator_complicate.rule
+t/lib/Data/RuledValidator/Plugin/URL.pm
 
 lib/Data/RuledValidator.pm
 lib/Data/RuledValidator/Closure.pm
 lib/Data/RuledValidator/Plugin/Core.pm
 lib/Data/RuledValidator/Plugin/Email.pm
 lib/Data/RuledValidator/Plugin/EmailLoose.pm
+
+
 META.yml                                 Module meta-data (added by MakeMaker)

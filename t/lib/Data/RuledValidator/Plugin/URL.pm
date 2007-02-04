@@ -1,13 +1,10 @@
-package Data::RuledValidator::Plugin::Email;
+package Data::RuledValidator::Plugin::URL;
 
-our $VERSION = '0.02';
-
-use Email::Valid;
-use Email::Valid::Loose;
+our $VERSION = '0.01';
 
 Data::RuledValidator->add_condition_operator
   (
-   'mail'       => sub{my($self, $v) = @_; return Email::Valid->address($v) ? 1 : ()},
+   'url'       => sub{my($self, $v) = @_; return $v =~m{^http://} ? 1 : ()},
   );
 
 1;
@@ -17,7 +14,7 @@ __END__
 
 =head1 NAME
 
-Data::RuledValidator::Plugin::Email - use Email::Valid
+Data::RuledValidator::Plugin::URL
 
 =head1 DESCRIPTION
 
@@ -31,7 +28,7 @@ Ktat, E<lt>ktat@cpan.orgE<gt>
 
 =head1 Copyright
 
-Copyright 2006-2007 by Ktat
+Copyright 2006 by Ktat
 
 This program is free software; you can redistribute it
 and/or modify it under the same terms as Perl itself.

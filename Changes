@@ -1,5 +1,12 @@
 Revision history for Perl extension Data::RuledValidator.
 
+0.05  Mon Feb  5 01:13:00 2007
+        - include Data::RuledValidator::Plugin::URL in t/ directory
+          I've forgatten to add this in 0.03 - 0.04
+        - add "in" to operator
+        - change email address
+        - add test
+
 0.04  Sat Feb  3 02:16:00 2007
         - fix typo
 

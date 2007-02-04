@@ -1,6 +1,6 @@
 package Data::RuledValidator;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 use strict;
 use warnings "all";
@@ -216,7 +216,9 @@ sub _result{
 sub valid{
   my($self) = @_;
   # too ugly
-  return $self->{strict} ? $self->{valid} : exists $self->{failure} ? %{$self->failure} ? 0 : 1 : 0;
+  return $self->{strict}         ? $self->{valid}    :
+         exists $self->{failure} ? %{$self->failure} ? 0 : 1
+                                 : 0;
 }
 
 sub reset{
@@ -879,6 +881,14 @@ This is needed 2 of keys x, y or z.
 
 If you want valid values, use of-valid instead of 'of'.
 
+=item in
+
+If value is in the words, it is OK.
+
+ key in Perl, Python, Ruby, PHP ...
+
+This is "or" condition. If value is equal to one of them, it is OK.
+
 =item match
 
 This is regular expression.
@@ -1104,7 +1114,7 @@ structure:
  rule_name =>
   {
     _regex_group      => [],
-  　# For group name, regexp can be used, for no need to find rule key is regexp or not,
+    # For group name, regexp can be used, for no need to find rule key is regexp or not,
     # This exists.
     id_key           => [],
     # Rule has key which identify group name. this hash is {RULE_NAME => key_name}
@@ -1150,11 +1160,11 @@ I need to do more test.
 
 =head1 AUTHOR
 
-Ktat, E<lt>atusi@pure.ne.jpE<gt>
+Ktat, E<lt>ktat@cpan.orgE<gt>
 
 =head1 COPYRIGHT
 
-Copyright 2006 by Ktat
+Copyright 2006-2007 by Ktat
 
 This program is free software; you can redistribute it
 and/or modify it under the same terms as Perl itself.

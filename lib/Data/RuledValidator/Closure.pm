@@ -3,7 +3,7 @@ package Data::RuledValidator::Closure;
 use strict;
 use warnings qw/all/;
 
-our $VERSION = 0.01;
+our $VERSION = 0.02;
 
 my $parent = 'Data::RuledValidator';
 
@@ -75,7 +75,7 @@ use constant
     },
     MATCH => sub {
       my($key, $c) = @_;
-      my @regex = split /\s+/, $c;
+      my @regex = _arg($c);
       my $sub = sub{
         my($self, $v) = @_;
         my $ok = 0;
@@ -134,7 +134,50 @@ use constant
       }
       return  sub{my($self, $v) = @_; _vand($self, $key, $c, $v, $sub)};
     },
+    IN => sub {
+      my($key, $c) = @_;
+      my @words = _arg($c);
+      my $sub = sub{
+        my($self, $v) = @_;
+        my $ok = 0;
+        foreach my $word (@words){
+          $ok |= $v eq $word or last;
+        }
+        return $ok;
+      };
+      return sub {my($self, $v) = @_; return(_vor($self, $key, $c, $v, sub{my($self, $v) = @_; $sub->($self, $v)}))};
+    },
   };
+
+sub _arg{# to escape quote, use \
+  shift if $_[0] eq __PACKAGE__;
+  # it is refer to Perl memo()
+  # http://www.din.or.jp/~ohzaki/perl.htm#CSV2Values
+  my($arg) = @_;
+  my @arg;
+  $arg =~ s/(?:\x0D\x0A|[\x0D\x0A])?$/,/;
+  return \@arg if $arg eq ',';
+  while($arg){
+    if($arg =~ s/^\s*('[^']*(?:\\'[^']*)*')\s*,//){
+      # value quoted with ""
+      $_ = $1;
+      push @arg, scalar(s/^\s*'(.*)'\s*$/$1/, s/\\'/'/g, $_)
+    }elsif($arg =~ s/^\s*("[^"]*(?:\\"[^"]*)*")\s*,//){
+      # value quoted with ''
+      $_ = $1;
+      push @arg, scalar(s/^\s*"(.*)"\s*$/$1/, s/\\"/"/g, $_)
+    }elsif($arg =~s/^([^,]+),//){
+      $_ = $1;
+      s/\s*$//g;
+      push @arg, $_ unless $_ eq '';
+    }else{
+      warn $arg;
+    }
+    $arg =~s/^[,\s]*//;
+  }
+  return @arg;
+}
+
 
 # '&' validation for multiple values
 sub _vand{
@@ -181,6 +224,7 @@ $parent->add_operator
    '<'      => LT,
    '<='     => LT,
    'between'=> BETWEEN,
+   'in'     => IN,
    'eq'     => sub {my($key, $c) = @_; return sub{my($self, $v) = @_; return (($v eq $c) + 0)}},
    'ne'     => sub {my($key, $c) = @_; return sub{my($self, $v) = @_; return (($v ne $c) + 0)}},
    'has'    =>
@@ -202,7 +246,7 @@ $parent->add_operator
    'of-valid' =>
    sub {
      my($key, $c) = @_;
-     my @cond = split(/[\s,]+/, $c);
+     my @cond = _arg($c);
      return
        sub {
          my($self, $values, $alias, $obj, $method) = @_;
@@ -219,7 +263,7 @@ $parent->add_operator
    'of'     =>
    sub {
      my($key, $c) = @_;
-     my @cond = split(/[\s,]+/, $c);
+     my @cond = _arg($c);
      return
        sub {
          my($self, $values, $alias, $obj, $method) = @_;
@@ -250,11 +294,11 @@ Data::RuledValidator::Closure - sobroutines to create closure using by Data::Rul
 
 =head1 Author
 
-Ktat, E<lt>atusi@pure.ne.jpE<gt>
+Ktat, E<lt>ktat@cpan.orgE<gt>
 
 =head1 Copyright
 
-Copyright 2006 by Ktat
+Copyright 2006-2007 by Ktat
 
 This program is free software; you can redistribute it
 and/or modify it under the same terms as Perl itself.

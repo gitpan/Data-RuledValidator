@@ -1,6 +1,7 @@
 use Test::More 'no_plan';
 
 BEGIN {
+  use lib qw(t/lib/);
   use_ok('Data::RuledValidator');
 }
 
@@ -35,7 +36,7 @@ $v->reset;
 $q->p(page => "///");
 $q->p(num_or_url => 'xxxx');
 
-ok(! $v->by_sentence('page is word, num', 'num_or_url is num,url', 'num_or_url is word'), 'by sentence');
+ok(! $v->by_sentence('page is word, num', 'num_or_url is num, url', 'num_or_url is word'), 'by sentence');
 ok(! $v);
 
 # use Data::Dumper;
