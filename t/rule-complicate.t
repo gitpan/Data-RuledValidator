@@ -1,53 +1,311 @@
-use Test::More 'no_plan';
+use Test::Base;
 
-BEGIN {
-  use_ok('Data::RuledValidator');
-}
+use lib qw(t/lib);
+use Data::RuledValidator;
+use DRV_Test;
 use Data::Dumper;
 use strict;
-use File::Copy ();
 
-my %query =
-  (
+filters({
+         i => [qw/eval validator/],
+         e => [qw/eval /],
+        });
+
+run_compare i  => 'e';
+
+sub validator{
+  my $in = shift;
+  my $q = DRV_Test->new(%$in);
+  my $v = Data::RuledValidator->new(strict => 1, obj => $q, method => 'p', rule => "t/validator_complicate.rule");
+  $v->by_rule({same_data => 'compare_from_data'});
+  my %tmp;
+  foreach(qw/failure result valid missing/){
+    $tmp{$_} = $v->{$_};
+  }
+  @{$tmp{missing}} = sort {$a cmp $b} @{$tmp{missing}};
+  # warn Data::Dumper::Dumper(\%tmp);
+  return \%tmp;
+}
+
+__END__
+===
+--- i
+  {
    page        => 'registration'                ,
    first_name  => 'Atsushi'                     ,
    last_name   => 'Kato'                        ,
    age         => 29                            ,
    sex         => 'male'                        ,
+   mail        => 'ktat@cpan.org'               ,
+   mail2       => 'ktat@cpan.org'               ,
+   mail3       => 'ktat@example.com'            ,
+   mail4       => 'ktat@example.com'            ,
+   password    => 'pass'                        ,
+   password2   => 'pass'                        ,
    hobby       => [qw/programming outdoor camp/],
-   birth_year  => 1777,
-   birth_month => 1,
-   birth_day   => 1,
-   favorite    => [qw/books music/],
+   birth_year  => 1777                          ,
+   birth_month => 1                             ,
+   birth_day   => 1                             ,
+   favorite    => [qw/books music/]             ,
    favorite_books  => ["Nodame", "Ookiku Furikabutte"],
    favorite_music  => ["Paul Simon"],
    must_select3    => [qw/1 2 3/],
    must_select1    => [qw/1/],
+   same_data       => 'compare_from_data',
    must_gt_1000    => 1001,
    must_lt_1000    => 999,
    must_in_1_10    => [qw/8 9 7 4 3/],
    length_in_10    => '1234567890',
    regex           => 'abcdef',
-);
-
-my $q = bless \%query, 'main';
-
-sub p{
-  my($self, $k, $v) = @_;
-  return
-    @_ == 3 ? $self->{$k} = $v :
-    @_ == 2 ? ref $self->{$k} ?
-              wantarray       ? @{$self->{$k}} : $self->{$k}->[0] : $self->{$k} :
-              keys %{$self};
+ };
+--- e
+  {
+   result =>
+   {
+    page_is              => 1,
+    page_valid           => 1,
+    first_name_is        => 1,
+    first_name_valid     => 1,
+    last_name_is         => 1,
+    last_name_valid      => 1,
+    age_is               => 1,
+    age_valid            => 1,
+    sex_in               => 1,
+    sex_valid            => 1,
+    mail_is              => 1,
+    mail_valid           => 1,
+    mail2_eq             => 1,
+    mail2_valid          => 1,
+    mail3_ne             => 1,
+    mail3_valid          => 1,
+    mail3_eq             => 1,
+    password_is          => 1,
+    password_valid       => 1,
+    password2_eq         => 1,
+    password2_valid      => 1,
+    same_data_eq         => 1,
+    same_data_valid      => 1,
+    'require_of-valid'   => 1,
+    'require_valid'      => 1,
+    required_valid       => 1,
+    birth_year_is        => 1,
+    birth_year_valid     => 1,
+    birth_month_is       => 1,
+    birth_month_valid    => 1,
+    birth_day_is         => 1,
+    birth_day_valid      => 1,
+    'birthdate_of-valid' => 1,
+    'birthdate_valid'    => 1,
+    hobby_in             => 1,
+    hobby_valid          => 1,
+    favorite_in          => 1,
+    favorite_valid       => 1,
+    favorite_books_is    => 1,
+    favorite_books_valid => 1,
+    favorite_music_is    => 1,
+    favorite_music_valid => 1,
+    must_select3_has     => 1,
+    must_select3_valid   => 1,
+    must_select1_has     => 1,
+    must_select1_valid   => 1,
+    'must_gt_1000_>'     => 1,
+    'must_gt_1000_valid' => 1,
+    'must_lt_1000_<'     => 1,
+    'must_lt_1000_valid' => 1,
+    must_in_1_10_between => 1,
+    must_in_1_10_valid   => 1,
+    'length_in_10_<='    => 1,
+    'length_in_10_valid' => 1,
+    regex_match          => 1,
+    regex_valid          => 1,
+   },
+   valid   => 1,
+   failure => {},
+   missing => [sort {$a cmp $b} qw/hogehoge hogehoge2/]
 }
-
-my $v = Data::RuledValidator->new(obj => $q, method => 'p', rule => "t/validator_complicate.rule");
-ok(ref $v, 'Data::RuledValidator');
-is($v->rule, "t/validator_complicate.rule");
-
-# registration
-ok($v->by_rule);
-ok($v);
-$v->reset;
-
-
+===
+--- i
+  {
+   page        => 'registration'                ,
+   first_name  => 'Atsushi'                     ,
+   last_name   => 'Kato'                        ,
+   age         => 29                            ,
+   sex         => 'male'                        ,
+   mail        => 'ktat@cpa'                    ,
+   mail2       => 'ktat@cpan'                   ,
+   mail3       => 'ktat@exampl'                 ,
+   mail4       => 'ktat@example'                ,
+   password    => 'pass'                        ,
+   password2   => 'pass'                        ,
+   hobby       => [qw/programming outdoor camp/],
+   birth_year  => 1777                          ,
+   birth_month => 1                             ,
+   birth_day   => 1                             ,
+   favorite    => [qw/books music/]             ,
+   favorite_books  => ["Nodame", "Ookiku Furikabutte"],
+   favorite_music  => ["Paul Simon"],
+   must_select3    => [qw/1 2 3/],
+   must_select1    => [qw/1/],
+   same_data       => 'compare_from_data',
+   must_gt_1000    => 1001,
+   must_lt_1000    => 999,
+   must_in_1_10    => [qw/8 9 7 4 3/],
+   length_in_10    => '1234567890',
+   regex           => 'abcdef',
+ };
+--- e
+  {
+   result =>
+   {
+    page_is              => 1,
+    page_valid           => 1,
+    first_name_is        => 1,
+    first_name_valid     => 1,
+    last_name_is         => 1,
+    last_name_valid      => 1,
+    age_is               => 1,
+    age_valid            => 1,
+    sex_in               => 1,
+    sex_valid            => 1,
+    mail_is              => 0,
+    mail_valid           => 0,
+    mail2_eq             => 0,
+    mail2_valid          => 0,
+    mail3_ne             => 1,
+    mail3_eq             => 0,
+    mail3_valid          => 0,
+    password_is          => 1,
+    password_valid       => 1,
+    password2_eq         => 1,
+    password2_valid      => 1,
+    same_data_eq         => 1,
+    same_data_valid      => 1,
+    'require_of-valid'   => 0,
+    'require_valid'      => 0,
+    required_valid       => 1,
+    birth_year_is        => 1,
+    birth_year_valid     => 1,
+    birth_month_is       => 1,
+    birth_month_valid    => 1,
+    birth_day_is         => 1,
+    birth_day_valid      => 1,
+    'birthdate_of-valid' => 1,
+    'birthdate_valid'    => 1,
+    hobby_in             => 1,
+    hobby_valid          => 1,
+    favorite_in          => 1,
+    favorite_valid       => 1,
+    favorite_books_is    => 1,
+    favorite_books_valid => 1,
+    favorite_music_is    => 1,
+    favorite_music_valid => 1,
+    must_select3_has     => 1,
+    must_select3_valid   => 1,
+    must_select1_has     => 1,
+    must_select1_valid   => 1,
+    'must_gt_1000_>'     => 1,
+    'must_gt_1000_valid' => 1,
+    'must_lt_1000_<'     => 1,
+    'must_lt_1000_valid' => 1,
+    must_in_1_10_between => 1,
+    must_in_1_10_valid   => 1,
+    'length_in_10_<='    => 1,
+    'length_in_10_valid' => 1,
+    regex_match          => 1,
+    regex_valid          => 1,
+   },
+   valid   => 0,
+   failure => {
+               mail_is  => ['ktat@cpa'],
+               mail2_eq => ['ktat@cpan'],
+               mail3_eq => ['ktat@exampl'],
+               'require_of-valid' => [undef],
+              },
+   missing => [sort {$a cmp $b} qw/hogehoge hogehoge2/]
+}
+===
+--- i
+  {
+   page        => 'registration'                ,
+   first_name  => 'Atsushi'                     ,
+   last_name   => 'Kato'                        ,
+   age         => 29                            ,
+   sex         => 'male'                        ,
+   password    => 'pass'                        ,
+   password2   => 'pass'                        ,
+   hobby       => [qw/programming outdoor camp/],
+   birth_year  => 1877                          ,
+   birth_month => 1                             ,
+   birth_day   => 1                             ,
+   favorite    => [qw/books music/]             ,
+   favorite_books  => ["Nodame", "Ookiku Furikabutte"],
+   favorite_music  => ["Paul Simon"],
+   must_select3    => [qw/1 2 3/],
+   must_select1    => [qw/1/],
+   same_data       => 'compare_from_data',
+   must_gt_1000    => 1001,
+   must_lt_1000    => 999,
+   must_in_1_10    => [qw/8 9 7 4 3/],
+   length_in_10    => '1234567890',
+   regex           => 'abcdef',
+ };
+--- e
+  {
+   result =>
+   {
+    page_is              => 1,
+    page_valid           => 1,
+    first_name_is        => 1,
+    first_name_valid     => 1,
+    last_name_is         => 1,
+    last_name_valid      => 1,
+    age_is               => 1,
+    age_valid            => 1,
+    sex_in               => 1,
+    sex_valid            => 1,
+    password_is          => 1,
+    password_valid       => 1,
+    password2_eq         => 1,
+    password2_valid      => 1,
+    same_data_eq         => 1,
+    same_data_valid      => 1,
+    'require_of-valid'   => 0,
+    'require_valid'      => 0,
+    required_valid       => 0,
+    birth_year_is        => 1,
+    birth_year_valid     => 1,
+    birth_month_is       => 1,
+    birth_month_valid    => 1,
+    birth_day_is         => 1,
+    birth_day_valid      => 1,
+    'birthdate_of-valid' => 1,
+    'birthdate_valid'    => 1,
+    hobby_in             => 1,
+    hobby_valid          => 1,
+    favorite_in          => 1,
+    favorite_valid       => 1,
+    favorite_books_is    => 1,
+    favorite_books_valid => 1,
+    favorite_music_is    => 1,
+    favorite_music_valid => 1,
+    must_select3_has     => 1,
+    must_select3_valid   => 1,
+    must_select1_has     => 1,
+    must_select1_valid   => 1,
+    'must_gt_1000_>'     => 1,
+    'must_gt_1000_valid' => 1,
+    'must_lt_1000_<'     => 1,
+    'must_lt_1000_valid' => 1,
+    must_in_1_10_between => 1,
+    must_in_1_10_valid   => 1,
+    'length_in_10_<='    => 1,
+    'length_in_10_valid' => 1,
+    regex_match          => 1,
+    regex_valid          => 1,
+   },
+   valid   => 0,
+   failure => {
+               'require_of-valid' => [undef],
+              },
+   missing => [sort {$a cmp $b} qw/hogehoge hogehoge2 mail mail2 mail3/],
+}

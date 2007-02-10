@@ -1,9 +1,10 @@
 package Data::RuledValidator::Closure;
 
+use Data::RuledValidator::Util;
 use strict;
 use warnings qw/all/;
 
-our $VERSION = 0.02;
+our $VERSION = 0.03;
 
 my $parent = 'Data::RuledValidator';
 
@@ -75,12 +76,12 @@ use constant
     },
     MATCH => sub {
       my($key, $c) = @_;
-      my @regex = _arg($c);
+      my @regex = map qr/$_/,_arg($c);
       my $sub = sub{
         my($self, $v) = @_;
         my $ok = 0;
         foreach my $regex (@regex){
-          $ok |= $v =~ qr/$regex/ or last;
+          $ok |= $v =~ $regex or last;
         }
         return $ok;
       };
@@ -97,9 +98,9 @@ use constant
         }
       }else{
         if($c =~s/\s*~\s*//){
-          $sub = sub{my($self, $v) = @_; return ((length($v) >  $c) + 0)}
+          $sub = sub{my($self, $v) = @_; return $v ? ((length($v) >  $c) + 0) : ()}
         }else{
-          $sub = sub{my($self, $v) = @_; return (($v >  $c) + 0)}
+          $sub = sub{my($self, $v) = @_; return $v ? (($v >  $c) + 0) : ()}
         }
       }
       return sub{my($self, $v) = @_; _vand($self, $key, $c, $v, $sub)};
@@ -115,9 +116,9 @@ use constant
         }
       }else{
         if($c =~s/\s*~\s*//){
-          $sub = sub{my($self, $v) = @_; return ((length($v) <  $c) + 0)}
+          $sub = sub{my($self, $v) = @_; return $v ? ((length($v) <  $c) + 0) : ()}
         }else{
-          $sub = sub{my($self, $v) = @_; return (($v <  $c) + 0)}
+          $sub = sub{my($self, $v) = @_; return $v ? (($v <  $c) + 0) : ()}
         }
       }
       return  sub{my($self, $v) = @_; _vand($self, $key, $c, $v, $sub)};
@@ -127,10 +128,10 @@ use constant
       my $sub;
       if($c =~s/\s*~\s*//){
         my($start, $end) = split(/,/, $c);
-        $sub = sub{my($self, $v) = @_; return (($start <= length($v) and length($v) <=  $end) + 0)}
+        $sub = sub{my($self, $v) = @_; return $v ? (($start <= length($v) and length($v) <=  $end) + 0) : ()}
       }else{
         my($start, $end) = split(/,/, $c);
-        $sub = sub{my($self, $v) = @_; return (($start <= $v and $v <=  $end) + 0)}
+        $sub = sub{my($self, $v) = @_; return $v ? (($start <= $v and $v <=  $end) + 0) : ()}
       }
       return  sub{my($self, $v) = @_; _vand($self, $key, $c, $v, $sub)};
     },
@@ -147,87 +148,60 @@ use constant
       };
       return sub {my($self, $v) = @_; return(_vor($self, $key, $c, $v, sub{my($self, $v) = @_; $sub->($self, $v)}))};
     },
+    EQ => sub {
+      my($key, $c) = @_;
+      if($c =~s/^\[(.+)\]$/$1/){
+        return sub{
+          my($self, $v, $key, $obj, $method) = @_;
+          return (($v->[0] eq $obj->$method($c)) + 0)
+        };
+      }elsif($c =~s/^\{(.+)\}$/$1/){
+        return sub{
+          my($self, $v, $key, $obj, $method, $given_data) = @_;
+          return (($v->[0] eq $given_data->{$c}) + 0)
+        };
+      }else{
+        return sub{
+          my($self, $v) = @_;
+          return (($v->[0] eq $c) + 0);
+        };
+      }
+    },
+    NE => sub {
+      my($key, $c) = @_;
+      if($c =~s/^\[(.+)\]$/$1/){
+        return sub{
+          my($self, $v, $key, $obj, $method) = @_;
+          return (($v->[0] ne $obj->$method($c)) + 0)
+        };
+      }else{
+        return sub{
+          my($self, $v) = @_;
+          return (($v->[0] ne $c) + 0);
+        };
+      }
+    },
   };
-
-sub _arg{# to escape quote, use \
-  shift if $_[0] eq __PACKAGE__;
-  # it is refer to Perl memo()
-  # http://www.din.or.jp/~ohzaki/perl.htm#CSV2Values
-  my($arg) = @_;
-  my @arg;
-  $arg =~ s/(?:\x0D\x0A|[\x0D\x0A])?$/,/;
-  return \@arg if $arg eq ',';
-  while($arg){
-    if($arg =~ s/^\s*('[^']*(?:\\'[^']*)*')\s*,//){
-      # value quoted with ""
-      $_ = $1;
-      push @arg, scalar(s/^\s*'(.*)'\s*$/$1/, s/\\'/'/g, $_)
-    }elsif($arg =~ s/^\s*("[^"]*(?:\\"[^"]*)*")\s*,//){
-      # value quoted with ''
-      $_ = $1;
-      push @arg, scalar(s/^\s*"(.*)"\s*$/$1/, s/\\"/"/g, $_)
-    }elsif($arg =~s/^([^,]+),//){
-      $_ = $1;
-      s/\s*$//g;
-      push @arg, $_ unless $_ eq '';
-    }else{
-      warn $arg;
-    }
-    $arg =~s/^[,\s]*//;
-  }
-  return @arg;
-}
-
-
-# '&' validation for multiple values
-sub _vand{
-  my ($self, $key, $c, $val, $sub) = @_;
-  my $ok = 1;
-  foreach my $v (@$val){
-    my $_ok = 1;
-    if($_ok = $sub->($self, $v) ? 1 : 0){
-      push @{$self->{rigth}->{"${key}_$c"} ||= []},  $v;
-    }else{
-      push @{$self->{wrong}->{"${key}_$c"} ||= []},  $v;
-    }
-    $ok &= $_ok;
-  }
-  return $ok;
-}
-
-# '|' validation for multiple values
-sub _vor{
-  my ($self, $key, $c, $val, $sub) = @_;
-  my $ok = 0;
-  foreach my $v (@$val){
-    my $_ok = 0;
-    if($_ok = $sub->($self, $v) ? 1 : 0){
-      push @{$self->{rigth}->{"${key}_$c"} ||= []},  $v;
-    }else{
-      push @{$self->{wrong}->{"${key}_$c"} ||= []},  $v;
-    }
-    $ok |= $_ok;
-  }
-  return $ok;
-}
 
 $parent->add_operator
   (
-   'is'     => ARE,
-   'isnt'   => ARENT,
-   'are'    => ARE,
-   'arent'  => ARENT,
-   're'     => MATCH,
-   'match'  => MATCH,
-   '>'      => GT,
-   '>='     => GT,
-   '<'      => LT,
-   '<='     => LT,
-   'between'=> BETWEEN,
-   'in'     => IN,
-   'eq'     => sub {my($key, $c) = @_; return sub{my($self, $v) = @_; return (($v eq $c) + 0)}},
-   'ne'     => sub {my($key, $c) = @_; return sub{my($self, $v) = @_; return (($v ne $c) + 0)}},
-   'has'    =>
+   'is'        => ARE,
+   'isnt'      => ARENT,
+   'are'       => ARE,
+   'arent'     => ARENT,
+   're'        => MATCH,
+   'match'     => MATCH,
+   '>'         => GT,
+   '>='        => GT,
+   '<'         => LT,
+   '<='        => LT,
+   'between'   => BETWEEN,
+   'in'        => IN,
+   'eq'        => EQ,
+   'ne'        => NE,
+   'equal'     => EQ,
+   'not_equal' => NE,
+   'has'       =>
    sub {
      my($key, $c) = @_;
      if(my($e, $n) = $c =~m{^\s*([<>])?\s*(\d+)$}){
@@ -258,7 +232,7 @@ $parent->add_operator
            ++$n;
          }
          return $key eq 'all' ? ($ok == $n) + 0 : ($ok == $key) + 0 ;
-       }
+       }, NEED_ALIAS | IGNORE_REQUIRED;
      },
    'of'     =>
    sub {
@@ -275,14 +249,11 @@ $parent->add_operator
            ++$n;
          }
          return $key eq 'all' ? ($ok == $n) + 0 : ($ok == $key) + 0 ;
-       }
+       }, NEED_ALIAS | IGNORE_REQUIRED;
      },
   );
 
 1;
-__END__
-
-=pod
 
 =head1 Name
 

@@ -4,19 +4,26 @@ ID_KEY page
 
 page is alpha
 
-;;registration
-
 first_name  is alpha
 last_name   is alpha
-age         is num
+age         is num with trim
 sex         in "male","female"
-hobby       in "programming","outdoor", "camp"
+mail        is mail
+mail2       eq [mail]
+mail3       ne [mail]
+mail3       eq [mail4]
+password    is alphanum
+password2   eq [password]
+same_data   eq {same_data}
+require   = all of-valid first_name, last_name, age, sex, mail, mail2, password, password2
+required  = first_name, last_name, age, sex, mail, mail2, password, password2
 
 birth_year  is num
 birth_month is num
 birth_day   is num
-all         of birth_year, birth_month, birth_day
+birthdate = all of-valid birth_year, birth_month, birth_day
 
+hobby          in "programming","outdoor", "camp"
 favorite       in "books","music"
 favorite_books is words
 favorite_music is words
@@ -30,4 +37,9 @@ must_in_1_10 between 1,10
 length_in_10 <= ~ 10
 
 regex        match ^abc, def$, ^abcdef$
+filter first_name, last_name with trim
+hogehoge     eq hogehoge
+hogehoge2     eq hogehoge
+
+;;registration
 

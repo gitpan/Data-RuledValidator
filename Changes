@@ -1,5 +1,30 @@
 Revision history for Perl extension Data::RuledValidator.
 
+0.06 Sun  Feb 11 05:12:00 2007
+        - can use special value for "eq" and "ne"
+          key eq/ne [key]
+          key eq/ne {key}
+        - change for required value
+          add required_alias_name
+          add new syntax
+          required = key1, key2, key3 ...
+        - "match" become faster a bit
+        - Data::RuledValidator::Util is added
+          separate utility functions and flag.
+        - now, "of" and "of-valid" needs alias name.
+        - add filter feature
+          filter ... with filter_name, ...
+          sentense ... with filter_name, ...
+          can relace object method value with filtered value
+        - add import option when using module
+        - use UNIVERSAL::require
+        - use Class::Inspector
+        - change valid method behavior
+        - add test
+        - refactor _validator method
+        - remove strict option
+        - add missing method
+
 0.05  Mon Feb  5 01:13:00 2007
         - include Data::RuledValidator::Plugin::URL in t/ directory
           I've forgatten to add this in 0.03 - 0.04
@@ -11,23 +36,23 @@ Revision history for Perl extension Data::RuledValidator.
         - fix typo
 
 0.03  Sun Jun 14 00:19:00 2006
-	- if rule is changed, re-parse it.
-	- now regex group name can be used.
+        - if rule is changed, re-parse it.
+        - now regex group name can be used.
         - PATH_INFO group name can be used, easily.
-	- fix bug: comment couldn't be used.
-	- add strict option which effects valid behavior
-	  no strict and no failure, it is valid.
-	- add id_method, id_obj method.
+        - fix bug: comment couldn't be used.
+        - add strict option which effects valid behavior
+          no strict and no failure, it is valid.
+        - add id_method, id_obj method.
           for using another obj/method to identify GROUP_NAME.
-	- specify multiple methods for nested calling.
-       	- change some in doc.
+        - specify multiple methods for nested calling.
+        - change some in doc.
           id_key_value -> GROUP_NAME, etc.
-	- add test for pod.
+        - add test for pod.
 
 0.02  Sat Apr 17 00:53:00 2006
-	- use Module::Pluggable
-	- move Email validation to plugin.
-	- add option import_error when using module.
+        - use Module::Pluggable
+        - move Email validation to plugin.
+        - add option import_error when using module.
 
 0.01  Sat Mar 11 21:19:00 2006
-	- original version;
+        - original version;

@@ -1,10 +1,15 @@
 package Data::RuledValidator;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 use strict;
 use warnings "all";
-
+use File::Slurp;
+use Data::RuledValidator::Util;
+use Data::RuledValidator::Filter;
+use Class::Inspector;
+use UNIVERSAL::require;
+use List::MoreUtils qw/any uniq/;
 use Module::Pluggable search_path => [qw/Data::RuledValidator::Plugin/];
 
 use overload 
@@ -14,6 +19,8 @@ use overload
 my %RULES;
 my %COND_OP;
 my %MK_CLOSURE;
+my %REQUIRED;
+my %FILTER;
 
 sub _rules{
   my($self, $rule) = @_;
@@ -23,6 +30,7 @@ sub _rules{
       $RULES{$rule}->{time} ||= $t;
       if($RULES{$rule}->{time} < $t){
         delete $RULES{$rule}->{coded_rule};
+        delete $REQUIRED{$rule};
         $RULES{$rule}->{time} = $t;
       }
     }
@@ -54,16 +62,35 @@ sub _regex_group{
 
 sub import{
   my($class, %option) = @_;
+  my %import;
+  $option{import} = ref $option{import} ?   $option{import}   :
+                        $option{import} ? [ $option{import} ] :
+                                          []                  ;
+  @import{ map { __PACKAGE__ . '::Plugin::' . $_ }  @{$option{import}}} = ();
   foreach my $plugin (__PACKAGE__->plugins){
-    eval"CORE::require $plugin";
-    if($@ and my $er = $option{import_error}){
-      if($er == 1){
-        warn "Plugin import Error: $plugin - $@";
-      }else{
-        die  "Plugin import Error: $plugin - $@";
+    unless(Class::Inspector->loaded($plugin)){
+      if( (not @{$option{import}} or exists $import{$plugin} ) ){
+        $plugin->require
       }
+      delete $import{ $plugin };
+      if($@ and my $er = $option{import_error}){
+        if($er == 1){
+          warn "Plugin import Error: $plugin - $@";
+        }else{
+          die  "Plugin import Error: $plugin - $@";
+        }
+      }
+    }else{
+      delete $import{ $plugin };
     }
   }
+  unless(Class::Inspector->loaded(__PACKAGE__ . '::Plugin::Core')){
+    (__PACKAGE__ . '::Plugin::Core')->require;
+  }
+  if(@{$option{import}} and %import){
+    die join(", ", keys %import) . " plugins doesn't exist.";
+  }
+
 }
 
 sub _cond_op{ my $self = shift; return @_ ? $COND_OP{shift()} : keys %COND_OP};
@@ -110,8 +137,8 @@ sub new{
   my($class, %option) = @_;
   $option{result}   = {};
   $option{valid}    = 0;
-  $option{strict} ||= 0;
   $option{rule}   ||= '';
+  $option{filter_replace} ||= 0;
   my $o = bless \%option, $class;
   return $o;
 }
@@ -138,23 +165,53 @@ sub to_obj{ shift()->{to_obj} };
 
 sub method{ shift()->{method} };
 
+sub required_alias_name{
+  my($self, $name) = @_;
+  if(@_ == 2){
+    return $self->{required_alias_name} = $name;
+  }else{
+    return $self->{required_alias_name} || 'required';
+  }
+}
+
 sub _parse_definition{
   my($self, $defs) = @_;
   my @def;
+  my %required;
+  my %filter;
+  my $required_name = $self->required_alias_name;
   foreach my $def (@$defs){
     my $alias = $def =~ s/^\s*(\w+)\s*=\s*// ? $1 : '';
-    my($key, $op, $cond) = split /\s+/, $def, 3;
-    my $closure = $MK_CLOSURE{$op} ? $MK_CLOSURE{$op}->($key, $cond, $op) : Carp::croak("not defined operator: $op");
-    push @def, [$alias, $key, $op, $closure];
+    if($alias and $alias eq $required_name){
+      @required{split /\s*,\s*/, $def} = ();
+    }elsif($def =~/filter\s+(.+)\s+with\s+(.+)\s*$/){
+      my($keys, $values) = ($1, $2);
+      @filter{split /\s*,\s*/, $keys} = [ split /\s*,\s*/, $values ];
+    }else{
+      my $filter;
+      if($def =~ s/\s*with\s*(.+?)$//){
+        $filter = [ split /\s*,\s*/, $filter = $1];
+      }
+      my($key, $op, $cond) = split /\s+/, $def, 3;
+      my($closure, $flg) = $MK_CLOSURE{$op} ? $MK_CLOSURE{$op}->($key, $cond, $op) : Carp::croak("not defined operator: $op");
+      $flg ||= 0;
+      if($flg & NEED_ALIAS and not $alias){
+        Carp::croak("Rule Syntax Error: $op needs alias name.");
+      }
+      push @def, [$alias, $key, $op, $closure, $flg, $filter];
+    }
   }
-  return \@def;
+  return(\@def, \%required, \%filter);
 }
 
 sub by_sentence{
+  my $given_data = {};
+  $given_data = pop(@_)  if ref $_[-1] eq 'HASH';
+
   my($self, @definition) = @_;
   @definition = @{$definition[0]} if ref $definition[0] eq 'ARRAY';
-  my $defs = $self->_parse_definition(\@definition);
-  return $self->_validator($defs);
+  my($defs, $required, $filter) = $self->_parse_definition(\@definition);
+  return $self->_validator($defs, $given_data, $required, $filter);
 }
 
 sub _get_value{
@@ -166,45 +223,101 @@ sub _get_value{
 }
 
 sub _validator{
-  my($self, $defs) = @_;
-  my $obj = $self->obj;
-  my $method = $self->method;
-  my(%result, %failure);
-  my $result;
+  my($self, $defs, $given_data, $required, $filter) = @_;
+  my($obj, $method) = ($self->obj, $self->method);
+  my(%result, %failure, @missing);
   my $all_result = 1;
-  my($def_num, $ok_num);
-  $self->{result} = \%result;
-  $self->{failure}  = \%failure;
+  my $required_valid = $self->required_alias_name . '_valid';
+  $result{$required_valid} = 1 if %$required;
+  $self->result(\%result);
 
   foreach my $def (@$defs){
-    my($alias, $key, $op, $sub) = @$def;
-    Carp::craok('cannot define same combination of key and operator twice.') if exists $result{$alias . '_' . $op};
+    my($alias, $key, $op, $sub, $flg, $here_filter) = @$def;
+    my $result = undef;
+    Carp::craok('cannot define same combination of key/alias and operator twice.') if exists $result{$alias . '_' . $op};
     $alias ||= $key;
     my @value = $self->_get_value($obj, $method, $key);
+    if(my $key_filter = $filter->{$key}){
+      $self->_filter_value($key, \@value, $key_filter);
+      $self->_filtered_value($key, \@value);
+    }
+    if(ref $here_filter eq 'ARRAY'){
+      $self->_filter_value($key, \@value, $here_filter);
+    }
     if(defined $MK_CLOSURE{$op}){
-      $result = $sub->($self, \@value, $alias, $obj, $method) || 0;
-      unless($result{$alias . '_' . $op} = $result){
-        $failure{$alias . '_' . $op} = \@value unless not @value or defined $failure{$alias . '_' . $op};
+      if($flg & IGNORE_REQUIRED or any sub{defined $_}, @value){
+        $result = $sub->($self, \@value, $alias, $obj, $method, $given_data) || 0;
+        $result{ $alias . '_' . $op } = $result;
+        $result{ $alias . '_valid'  } ||= 1;
+        $result{ $alias . '_valid'  }  &= $result;
+        if(not $result and @value and not defined $failure{$alias . '_' . $op}){
+          $failure{$alias . '_' . $op} = \@value;
+        }
+        $all_result &= $result;
       }else{
-        $result{$alias . '_valid'} = 1 unless defined $result{$alias . '_valid'};
-        $result{$alias . '_valid'} &= $result;
+        if(exists $required->{$alias}){
+          $result{$required_valid} &= $result || 0;
+        }
+        push @missing, $alias;
       }
     }
-    $all_result &= $result;
   }
 
-  # $result &= (($ok_num || 0) == $def_num + 0);
-  $self->{valid}  = $all_result;
+  $self->valid($all_result);
+  $self->missing(\@missing);
+  $self->result(\%result);
+  $self->failure(\%failure);
+  $self->_do_filter_replace;
   return $self;
 }
 
-sub result{
+sub filter_replace{
+  my($self, $value) = @_;
+  return $self->{filter_replace} = $value if @_ == 2;
+  return $self->{filter_replace};
+}
+
+sub _do_filter_replace{
   my($self) = @_;
-  return($self->{result} || {});
+  return unless my $filter = $self->filter_replace;
+
+  my %filter_replace = %{$self->{filtered_value} || {}};
+  my($obj, $method) = ($self->obj, $self->method);
+  if(ref $filter){
+    while(my($k, $v) = each %filter_replace){
+      $obj->$method($k, $v);
+    }
+  }else{
+    while(my($k, $v) = each %filter_replace){
+      $obj->$method($k, @$v);
+    }
+  }
+}
+
+sub _filtered_value{
+  my($self, $key, $value) = @_;
+  return $self->{filtered_value}->{$key} = $value if @_ == 3;
+  return $self->{filtered_value}->{$key};
+}
+
+sub _filter_value{
+  my($self, $key, $value, $key_filter) = @_;
+  foreach my $value (@$value){
+    foreach my $filter (@$key_filter){
+      Data::RuledValidator::Filter->$filter(\$value);
+    }
+  }
+}
+
+sub result{
+  my($self, $result) = @_;
+  $self->{result} = $result  if @_ == 2;
+  return($self->{result} ||= {});
 }
 
 sub failure{
-  my($self) = @_;
+  my($self, $failure) = @_;
+  $self->{failure} = $failure  if @_ == 2;
   return($self->{failure} || {});
 }
 
@@ -213,21 +326,42 @@ sub _result{
   return [%{$self->{result}}];
 }
 
+sub missing{
+  my($self, $missing) = @_;
+  if(@_ == 2){
+    $self->{missing} = [ uniq @$missing ];
+  }
+  return $self->{missing};
+}
+
 sub valid{
-  my($self) = @_;
-  # too ugly
-  return $self->{strict}         ? $self->{valid}    :
-         exists $self->{failure} ? %{$self->failure} ? 0 : 1
-                                 : 0;
+  my($self, $valid) = @_;
+  if(defined $valid){
+    $self->{valid} = $valid;
+  }
+  if(exists $self->{valid}){
+    my $required_valid = $self->required_alias_name . '_valid';
+    my $not_fail = exists $self->{failure} ? not %{$self->failure} : 1;
+    if(exists $self->{result}->{$required_valid}){
+      return $self->ok($required_valid) ? $not_fail : 0;
+    }else{
+      return $not_fail;
+    }
+  }else{
+    return;
+  }
 }
 
 sub reset{
   my($self) = @_;
-  delete $self->{$_} foreach qw/result valid failure wrong right/;
+  delete $self->{$_} foreach qw/result valid failure/; # wrong right/; future
 }
 
 sub by_rule{
+  my $given_data = {};
+  $given_data = pop(@_)  if ref $_[-1] eq 'HASH';
   my($self, $rule) = @_;
+
   $rule = $rule ? $self->rule($rule) : $self->rule;
   Carp::croak("need rule name")  unless $rule;
   $self->_parse_rule($rule) unless %{ $self->_rules($rule) || {} };
@@ -235,14 +369,14 @@ sub by_rule{
   my $id_key = $self->id_key($rule);
   my $rule_name = $id_key =~ /^ENV_(.+)$/i ? $ENV{uc($1)} : $self->_get_value($obj, $method, $id_key || ());
 
-  my $defs = $self->_rules($rule)->{$rule_name};
+  my $defs = defined $rule_name ? $self->_rules($rule)->{$rule_name} : undef;
   unless($defs){
     foreach my $r ($self->_regex_group($rule)){
       last if $defs = $self->_rules($rule)->{$r};
     }
   }
   $self->{rule_name} = $rule_name;
-  return $self->_validator($defs || []);
+  return $self->_validator($defs || [], $given_data, $REQUIRED{$rule_name}, $FILTER{$rule_name});
 }
 
 sub _distinct_rule{
@@ -250,12 +384,24 @@ sub _distinct_rule{
   my %has;
   my %na;
   my @new_rule;
-  my @rule = (($rule->[0]->[1] eq 'GLOBAL' and $rule->[0]->[2] eq 'is' and $rule->[0]->[3] eq 'n/a') ? @$rule : (@$global_rule, @$rule)) ;
+  my @rule;
+  my $first_rule_line = $rule->[0];
+  if(    ref $first_rule_line  eq 'ARRAY'
+     and $first_rule_line->[1] eq 'GLOBAL'
+     and $first_rule_line->[2] eq 'is'
+     and $first_rule_line->[3] eq 'n/a'
+  ){
+    @rule = @$rule;
+  }else{
+    @rule = (@$global_rule, @$rule);
+  }
   foreach my $def (reverse @rule){
     next unless $def->[2];
-    if(exists $MK_CLOSURE{$def->[2]}){
-      $na{$def->[1]}->{$def->[2]} = 1 if $def->[3] eq 'n/a';
-      push @new_rule, $def unless $na{$def->[1]}->{$def->[2]} or $has{$def->[1]}->{$def->[2]}++;
+    my($alias, $key, $op, $cond) = @$def;
+    if(exists $MK_CLOSURE{$op}){
+      my $alias = $alias || $key;
+      $na{$alias}->{$op} = 1 if $cond eq 'n/a';
+      push @new_rule, $def unless $na{$alias}->{$op} or $has{$alias}->{$op}++;
     }else{
       push @new_rule, $def;
     }
@@ -271,10 +417,8 @@ sub _parse_rule{
   if(ref $rule eq 'SCALAR'){
     @rule = split/[\n\r]/, $$rule;
   }else{
-    open IN, $rule or Carp::croak "cannot open $rule";
-    seek IN, 0, 0;
-    @rule = <IN>;
-    close IN;
+    @rule = File::Slurp::read_file($rule)
+        or Carp::croak "cannot open $rule";
   }
   foreach(@rule){
     chomp;
@@ -305,12 +449,16 @@ sub _parse_rule{
       push @{$rules->{$id_name}}, $line;
     }
   }
-  my $global_rule = $self->_parse_definition($rules->{GLOBAL}) || [];
-  $rules->{GLOBAL} = $global_rule;
+  my($global_rule, $required, $filter) = $self->_parse_definition($rules->{GLOBAL});
+  $rules->{  GLOBAL } = $global_rule ||= [];
+  $REQUIRED{ GLOBAL } = $required;
+  $FILTER{   GLOBAL } = $filter;
   while(my($id_name, $defs) = each %$rules){
     next if $id_name eq 'GLOBAL';
-    my $rule = $self->_parse_definition($defs) || [];
-    $rules->{$id_name} = $self->_distinct_rule($global_rule, $rule);
+    my($rule, $required, $filter) = $self->_parse_definition($defs);
+    $rules->{  $id_name } = $self->_distinct_rule($global_rule, $rule ||= []);
+    $REQUIRED{ $id_name } = %$required ? $required : $REQUIRED{ GLOBAL };
+    $FILTER{   $id_name } = %$filter   ? $filter   : $FILTER{ GLOBAL   };
   }
 }
 
@@ -352,7 +500,7 @@ You can use this without rule file.
 
  BEGIN{
    $ENV{REQUEST_METHOD} = "GET";
-   $ENV{QUERY_STRING} = "page=index&i=9&v=aaaaa&k=bbbb";
+   $ENV{QUERY_STRING} = "page=index&i=9&k=aaaaa&v=bbbb";
  }
  
  use Data::RuledValidator;
@@ -362,9 +510,10 @@ You can use this without rule file.
  my $v = Data::RuledValidator->new(obj => CGI->new, method => "param");
  print $v->by_sentence("i is num", "k is word", "v is word", "all of i,v,k");  # return 1 if valid
 
-This means that parameter of CGI object, i is number, k is word, v is also word and needs all of i, v and k.
+This means that parameter of CGI object, i is number, k is word,
+v is also word and needs all of i, k and v.
 
-Next example is using following rule;
+Next example is using following rule in file "validator.rule";
 
  ;;GLOBAL
  
@@ -389,7 +538,7 @@ left value of ID_KEY, "page" is parameter name to specify rule name to use.
  $id = $q->param("page");
 
 Now, $id is "index" (see above environmental values in BEGIN block),
-use rule in "index". Why using CGI object? you have to check new's arguments.
+use rule in "index". The specified module and method in new is used.
 "index" rule is following:
 
  ;;index
@@ -402,6 +551,8 @@ Global rule is applied as well.
  v is word
 
 So it is as same as first example.
+This means that parameter of CGI object, i is number, k is word,
+v is also word and needs all of i, k and v.
 
 =head1 RuledValidator GENERAL IDEA
 
@@ -453,6 +604,14 @@ If value is 1, warn.
 
 If value is 2, die.
 
+=item import
+
+You can specify which plugins you want to load.
+
+ use Data::RuledValdiator import => [qw/Email/];
+
+If you don't specify any plugins, all plugins will be loaded.
+
 =back
 
 =head1 CONSTRUCTOR
@@ -461,7 +620,11 @@ If value is 2, die.
 
 =item new
 
- my $v = Data::RuledValidator->new(obj => $obj, method => $method, rule => $rule_file_location);
+ my $v = Data::RuledValidator->new(
+                obj    => $obj,
+                method => $method,
+                rule   => $rule_file_location,
+          );
 
 $obj is Object which has values which you want to check.
 $method is Method of $obj which returns Value(s) which you want to check.
@@ -493,19 +656,25 @@ for identifying to group name, $id_obj->$id_method is used (when you omit id_met
 
 explained above.
 
-=item strict
+=item filter_replace
 
- strict => 0
+Data::RuledValidator has filter feature.
+You can decide replace object method value with filtered value or not.
 
-Before 0.03, Data::RuledValidator returns true with valid method,
-only when all key is valid.
-It means you need set "key is n/a",
-if you don't use keys defined in GLOBAL in other group.
-I think it is very bother.
+This option can take 3 kind of value.
 
-I will change it in future. At present, if strict is 0(it's default),
-if you have no wrong value, valid method returns true.
-But, if you reset, it returns undef.
+ filter_replace => 0
+
+This will not use filtered value.
+
+ filter_replace => 1
+ filter_replace => []
+
+Use filtered value.
+Using 1 or [] is depends on the way to set value with object method.
+
+ 1  ...  $q->param(key, @value);
+ [] ...  $q->param(key, [ @value ]);
 
 =back
 
@@ -558,10 +727,7 @@ You can get this result as following:
 The result of total validation check.
 The returned value is 1 or 0.
 
-If all rule is OK, valid is 1.
-If not, valid is 0.
-
-You can get this result as following:
+You can get this result as following, too:
 
  $result = $v;
 
@@ -580,6 +746,17 @@ This returned, for example, the following structure.
  }
 
 If you want wrong value only, use wrong method.
+
+=item missing
+
+The values included in rule is not given from object.
+You can get such keys/aliases as following
+
+ my $missing_arrayref = $v->missing;
+
+$missing_arrayref likes as following;
+
+ ['key', 'alias']
 
 =item wrong
 
@@ -609,11 +786,24 @@ The result of validation check is reseted.
 
 =over 4
 
+=item required_alias_name
+
+ $v->required_alias_name
+
+It is special alias name to specify required keys.
+
 =item list_plugins
 
  $v->list_plugins;
 
 list all plugins.
+
+=item filter_replace
+
+ $v->filter_replace;
+
+This get/set new's option.
+get/set value is 0, 1 or {}.
 
 =back
 
@@ -774,6 +964,43 @@ Result Data Structure:
    'zip_match'    => 1,
  }
 
+=item Special alias name for required values
+
+ required = name, id, password
+
+This alias name "required" is special name and
+syntax after the name, is special a bit.
+
+This sentence means these keys/aliases, name, id and password are requried.
+
+You can change the name "required" by required_alias_name method.
+
+Note that: You cannot write key name if you use alias and don't use the key name elsewhere.
+
+for example;
+
+ foo is alpha
+ alias = var is 'value'
+ 
+ # It doesn't work correctly because alias is used instead of key name 'var'
+ required = foo, var
+
+You should write as following;
+
+ foo is alpha
+ alias = var is 'value'
+ 
+ # It works correctly because alias is used
+ required = foo, alias
+
+But the following works correctly;
+
+ foo is alpha
+ alias = foo eq 'value'
+ 
+ # It works correctly because key name 'foo' is used elsewhere.
+ required = foo
+
 =item Override Global Rule
 
 You can override global rule.
@@ -802,6 +1029,48 @@ If you want delete all GLOBAL rule in 'index' group.
  ;index
 
  GLOBAL is n/a
+
+=back
+
+=head1 FILTERS
+
+Data::RuledValidator has filter feature.
+Two way to filter values in rule.
+
+=over 4
+
+=item filter Key, ... with FilterName, ...
+
+ filter tel_number with no_dash
+ tel_number is num
+ tel_number < ~ 10
+
+This declaration is no relation with location.
+So, following is as same mean as above.
+
+ tel_number is num
+ tel_number < ~ 10
+ filter tel_number with no_dash
+
+todo;
+
+ need to implement filter n/a
+
+=item Keys Operator Condition with FilterName, ...
+
+This is temporary filter.
+
+ tel1 = tel_number is num with no_dash
+ tel2 = tel_number is num
+
+tel1's tel_number is filtered tel_number,
+but tel2's tel_number is not filtered.
+
+But in following case, tel2 is filtered, too.
+
+ filter tel_number with no_dash
+ tel1 = tel_number is num with no_dash
+ tel2 = tel_number is num
 
 =back
 
@@ -850,7 +1119,7 @@ but, no use to use 'n/a' in condition.
 This is some different from others.
 Left word is not key. number or 'all'.
 
- all of x,y,z
+ all = all of x,y,z
 
 This is needed all of keys x, y and z.
 It is no need for these value of keys to be valid.
@@ -858,7 +1127,7 @@ If this key exists, it is OK.
 
 If you need only 2 of these keys. you can write;
 
- 2 of x,y,z
+ 2of3 = 2 of x,y,z
 
 This is needed 2 of keys x, y or z.
 
@@ -917,17 +1186,52 @@ You can write;
  key has < 4
  key has > 4
 
-=item eq
+=item eq (= equal)
 
  key eq STRING
 
 If key's value is as same as STRING, it is valid.
 
-=item ne
+You can use special string like following.
+
+ key eq [key_name]
+ key eq {data_key_name}
+
+[key_name] is result of $obj->$method(key_name).
+For the case which user have to input password twice,
+you can write following rule.
+
+ password eq [password2]
+
+This rule means, for examle;
+
+ $cgi->param('password') eq $cgi->param('password2');
+
+{data_key_name} is result of $data->{data_key_name}.
+For the case when you should check data from database.
+
+ my $db_data = ....;
+ if($cgi->parma('key') ne $db_data){
+    # wrong!
+ }
+
+In such a case, you can write as following.
+
+rule;
+
+ key eq {db_data}
+
+code;
+
+ my $db_data = ...;
+ $v->by_rule({db_data => $db_data});
+
+=item ne (= not_equal)
 
  key ne STRING
 
-if key's value is NOT as same as STRING, it is valid.
+If key's value is NOT as same as STRING, it is valid.
+You can use special string like "eq" in above explanation.
 
 =item E<gt>, E<gt>=
 
@@ -1051,7 +1355,7 @@ In example, first 2 values is used.
 
  Data::RuledValidator->add_condition_operator(name => $code);
 
-$code should return code ref.
+$code should be code ref.
 For example:
 
 __PACKAGE__->add_condition_operator
@@ -1132,7 +1436,11 @@ The keys are condition operator names. The values is coderef(condition operator)
 
 =item %MK_CLOSURE
 
- {operator => sub{coderef which create closure} }
+ { operator => sub{coderef which create closure} }
+
+=item %REQUIRED
+
+ { requred_key => undef, required_key2 => undef }
 
 =head1 NOTE
 
