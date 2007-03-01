@@ -15,4 +15,18 @@ sub p{
               keys %{$self};
 }
 
+sub self{
+  shift;
+}
+
+package Data::RuledValidator::Filter;
+
+sub birth_year_check{
+  my($self, $v, $drv, $values) = @_;
+  my($q, $method) = ($drv->obj, $drv->method);
+  my($year) = $q->$method('birth_year');
+  my $r = $q->$method(birthyear_is_1777 => $year == 1777);
+  return $$v = $r;
+}
+
 1;

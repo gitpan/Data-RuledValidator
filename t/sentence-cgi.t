@@ -46,7 +46,6 @@ ok(ok $v->ok('i_valid'));
 ok(not $v->ok('k_valid'));
 ok(not $v->ok('all_valid'));
 ok(not $v->valid);
-$v->reset;
 ok(! $v);
 
 # create alias
@@ -62,7 +61,6 @@ ok(ok $v->ok('i_valid'));
 ok(not $v->ok('k_valid'));
 ok(not $v->ok('all_valid'));
 ok(not $v->valid);
-$v->reset;
 ok(! $v);
 
 =functions

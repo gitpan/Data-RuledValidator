@@ -4,12 +4,12 @@ use strict;
 use warnings qw/all/;
 use base qw/Exporter/;
 
-our @EXPORT = qw(NEED_ALIAS IGNORE_REQUIRED _arg _vand _vor);
+our @EXPORT = qw(NEED_ALIAS ALLOW_NO_VALUE RKEYS _arg _vand _vor);
 
-our $VERSION = 0.01;
+our $VERSION = 0.02;
 
 sub NEED_ALIAS      { 1 }
-sub IGNORE_REQUIRED { 2 }
+sub ALLOW_NO_VALUE  { 2 }
 
 # '&' validation for multiple values
 sub _vand{

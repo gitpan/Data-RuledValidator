@@ -25,22 +25,16 @@ is($v->rule, "t/validator.rule");
 ok($v->by_rule);
 ok($v);
 
-$v->reset;
-
 # b
 $q->p(page => "b");
 ok($v->by_rule);
 ok($v);
-
-$v->reset;
 
 # c
 $q->p(page => "c");
 $q->p(mail => 'atsushi@example.com');
 ok($v->by_rule);
 ok($v);
-
-$v->reset;
 
 # change rule
 fcopy("t/original-2.rule" => "t/validator.rule");
@@ -49,8 +43,6 @@ fcopy("t/original-2.rule" => "t/validator.rule");
 ok($v->by_rule);
 ok($v);
 
-$v->reset;
-
 # b
 $q->p(i => '123');
 $q->p(n => 'abc');
@@ -58,15 +50,11 @@ $q->p(page => "b");
 ok($v->by_rule);
 ok($v);
 
-$v->reset;
-
 # c
 $q->p(page => "c");
 $q->p(mail => 'atsus/hi.@example.com');
 ok($v->by_rule);
 ok($v);
-
-$v->reset;
 
 # change rule
 fcopy("t/original.rule" => "t/validator.rule");

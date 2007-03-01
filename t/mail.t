@@ -46,7 +46,6 @@ ok(not $v->ok('lm_valid'));
 ok(not $v->ok('lm2_valid'));
 ok(not $v->ok('all_valid'));
 ok(not $v->valid);
-$v->reset;
 ok(! $v);
 is($q->param('lm'), 'ktat@cpan.org');
 

@@ -1,5 +1,24 @@
 Revision history for Perl extension Data::RuledValidator.
 
+0.07 Fri Mar  1 00:05
+        - rename IGNORE_REQUIRED to ALLOW_NO_VALUE
+        - fix document
+        - fix bug
+          inheritance of filter and required is incorrect
+          undefined rule name caused warning
+          GLOBAL is n/a didn't anything on filter and required
+          filter parsing is somewhat incorrect
+        - change spec
+          ID_METHOD values must be separated with comma
+        - add more test
+        - write filter document
+        - filter can take * as key
+        - pass object and values to filter
+        - cache filtered values in object
+        - reset when by_rule or by_sentence is called when auto_reset is true
+        - changed internal structure
+        - improve validator method
+
 0.06 Sun  Feb 11 05:12:00 2007
         - can use special value for "eq" and "ne"
           key eq/ne [key]
@@ -14,8 +33,8 @@ Revision history for Perl extension Data::RuledValidator.
         - now, "of" and "of-valid" needs alias name.
         - add filter feature
           filter ... with filter_name, ...
-          sentense ... with filter_name, ...
-          can relace object method value with filtered value
+          sentence ... with filter_name, ...
+          can replace object method value with filtered value
         - add import option when using module
         - use UNIVERSAL::require
         - use Class::Inspector
@@ -27,7 +46,7 @@ Revision history for Perl extension Data::RuledValidator.
 
 0.05  Mon Feb  5 01:13:00 2007
         - include Data::RuledValidator::Plugin::URL in t/ directory
-          I've forgatten to add this in 0.03 - 0.04
+          I've forgotten to add this in 0.03 - 0.04
         - add "in" to operator
         - change email address
         - add test

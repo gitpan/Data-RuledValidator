@@ -4,7 +4,7 @@ use Data::RuledValidator::Util;
 use strict;
 use warnings qw/all/;
 
-our $VERSION = 0.03;
+our $VERSION = 0.04;
 
 my $parent = 'Data::RuledValidator';
 
@@ -152,12 +152,14 @@ use constant
       my($key, $c) = @_;
       if($c =~s/^\[(.+)\]$/$1/){
         return sub{
-          my($self, $v, $key, $obj, $method) = @_;
+          my($self, $v, $key) = @_;
+          my($obj, $method) = ($self->obj, $self->method);
           return (($v->[0] eq $obj->$method($c)) + 0)
         };
       }elsif($c =~s/^\{(.+)\}$/$1/){
         return sub{
-          my($self, $v, $key, $obj, $method, $given_data) = @_;
+          my($self, $v, $key, $given_data) = @_;
+          my($obj, $method) = ($self->obj, $self->method);
           return (($v->[0] eq $given_data->{$c}) + 0)
         };
       }else{
@@ -171,7 +173,8 @@ use constant
       my($key, $c) = @_;
       if($c =~s/^\[(.+)\]$/$1/){
         return sub{
-          my($self, $v, $key, $obj, $method) = @_;
+          my($self, $v, $key) = @_;
+          my($obj, $method) = ($self->obj, $self->method);
           return (($v->[0] ne $obj->$method($c)) + 0)
         };
       }else{
@@ -214,7 +217,7 @@ $parent->add_operator
          return sub{my($self, $v) = @_; return @$v == $n}
        }
      }else{
-       Carp::croak("$c is not +# or -#(example +3 or -3); " . join ", ", $parent->_cond_op);
+       Carp::croak("$c is not number");
      }
    },
    'of-valid' =>
@@ -223,16 +226,20 @@ $parent->add_operator
      my @cond = _arg($c);
      return
        sub {
-         my($self, $values, $alias, $obj, $method) = @_;
+         my($self, $values, $alias, $given_data, $validate_data) = @_;
+         my($obj, $method) = ($self->obj, $self->method);
          my $ok = 0;
          my $n  = 0;
          foreach my $k (@cond){
            next unless $k;
+           if($self->valid_yet($k)){
+             $self->{valid} &= $self->_validate($k, @$validate_data);
+           }
            ++$ok if $self->valid_ok($k);
            ++$n;
          }
          return $key eq 'all' ? ($ok == $n) + 0 : ($ok == $key) + 0 ;
-       }, NEED_ALIAS | IGNORE_REQUIRED;
+       }, NEED_ALIAS | ALLOW_NO_VALUE;
      },
    'of'     =>
    sub {
@@ -240,7 +247,8 @@ $parent->add_operator
      my @cond = _arg($c);
      return
        sub {
-         my($self, $values, $alias, $obj, $method) = @_;
+         my($self, $values, $alias) = @_;
+         my($obj, $method) = ($self->obj, $self->method);
          my $ok = 0;
          my $n  = 0;
          foreach my $k (@cond){
@@ -249,7 +257,7 @@ $parent->add_operator
            ++$n;
          }
          return $key eq 'all' ? ($ok == $n) + 0 : ($ok == $key) + 0 ;
-       }, NEED_ALIAS | IGNORE_REQUIRED;
+       }, NEED_ALIAS | ALLOW_NO_VALUE;
      },
   );
 

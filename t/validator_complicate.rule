@@ -1,6 +1,8 @@
 ;;GLOBAL
 
 ID_KEY page
+# multiple method test
+ID_METHOD self , self , p
 
 page is alpha
 
@@ -43,3 +45,96 @@ hogehoge2     eq hogehoge
 
 ;;registration
 
+;;registration2
+
+GLOBAL is n/a
+
+;;registrationNoRequired
+
+require  = all of-valid first_name, last_name, age, sex, password, password2
+required = n/a
+
+;;registrationNoRequired2
+
+page is alphanum
+
+require  = all of-valid hogehoge
+required = n/a
+
+;;registration_no_required
+
+required = n/a
+page is word
+
+;;filter
+
+GLOBAL is n/a
+
+filter name with trim
+filter zip  with no_dash
+
+name is alphanum
+zip  is num
+
+;;no_filter
+
+GLOBAL is n/a
+
+name is alphanum
+zip  is num
+
+
+;;filter2
+
+GLOBAL is n/a
+
+name is alphanum with trim
+zip  is num with no_dash
+
+
+;;filter3
+
+GLOBAL is n/a
+
+filter name with trim
+filter zip  with no_dash
+
+name is alpha with no_filter
+zip  is num
+
+;;filter4
+
+GLOBAL is n/a
+
+filter name with trim
+filter zip  with no_dash
+
+name is alpha with n/a
+zip  is num
+
+;;specialfilter
+
+GLOBAL is n/a
+
+birth_year_is_1777 eq 1 with birth_year_check
+
+;;filter5
+
+GLOBAL is n/a
+
+filter * with trim
+
+name is alpha
+zip is num
+
+;;order_test
+
+GLOBAL is n/a
+
+filter * with trim
+
+name is alpha
+zip is num
+
+all_valid = all of name, zip
+all_v = all of-valid all_valid
