@@ -1,6 +1,6 @@
 package Data::RuledValidator;
 
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 
 use strict;
 use warnings "all";
@@ -220,9 +220,9 @@ sub _parse_definition{
       }
     }else{
       my $filter;
-      if($def =~ s{\s*with\s*n/a\s*$}{}){
+      if($def =~ s{\s+with\s+n/a\s*$}{}){
         $filter = [ 'no_filter' ];
-      }elsif($def =~ s/\s*with\s*(.+?)\s*$//){
+      }elsif($def =~ s/\s+with\s+(.+?)\s*$//){
         $filter = [ grep $_, split /\s*,\s*/, $filter = $1];
       }
       my($key, $op, $cond) = split /\s+/, $def, 3;
@@ -416,6 +416,18 @@ sub failure{
   return($self->{failure} || {});
 }
 
+#sub right{
+#  my($self, $right) = @_;
+##  $self->{right} = $right  if @_ == 2;
+#  return($self->{right} || {});
+#}
+
+#sub wrong{
+#  my($self, $right) = @_;
+##  $self->{right} = $right  if @_ == 2;
+#  return($self->{wrong} || {});
+#}
+
 sub _result{
   my($self) = @_;
   return [%{$self->{result}}];
@@ -449,7 +461,7 @@ sub valid{
 
 sub reset{
   my($self) = @_;
-  delete $self->{$_} foreach qw/result valid failure filtered_value/; # wrong right/; future
+  delete $self->{$_} foreach qw/result valid failure filtered_value right wrong/;
 }
 
 sub by_rule{
@@ -643,23 +655,28 @@ You can use this without rule file.
  use CGI;
  
  my $v = Data::RuledValidator->new(obj => CGI->new, method => "param");
- print $v->by_sentence("i is num", "k is word", "v is word", "required = i,v,k");  # return 1 if valid
+ print $v->by_sentence("age is num", "name is word", "nickname is word", "required = age,name,nickname");  # return 1 if valid
 
-This means that parameter of CGI object, i is number, k is word,
-v is also word and require i, k and v.
+This means that parameter of CGI object, age is number, name is word,
+nickname is also word and require age, name and nickname.
 
 Next example is using following rule in file "validator.rule";
 
  ;;GLOBAL
- 
+
  ID_KEY  page
  
- i is number
- k is word
- v is word
+ # $cgi->param('age') is num
+ age      is num
+ # $cgi->param('name') is word
+ name     is word
+ # $cgi->param('nickname') is word
+ nickname is word
  
+ # following rule is applyed when $cgi->param('page') is 'index'
  ;;index
- required = i, k, v
+ # requied $cgi->param('age'), $cgi->param('name') and $cgi->param('nickname')
+ required = age, name, nickname
 
 And code is(environmental values are as same as first example):
 
@@ -677,17 +694,17 @@ use rule in "index". The specified module and method in new is used.
 "index" rule is following:
 
  ;;index
- required = i, k, v
+ required = age, name, nickname
 
 Global rule is applied as well.
 
- i is number
- k is word
- v is word
+ age      is num
+ name     is word
+ nickname is word
 
 So it is as same as first example.
-This means that parameter of CGI object, i is number, k is word,
-v is also word and require i, k and v.
+This means that parameter of CGI object, age is number, name is word,
+nickname is also word and require age, name and nickname.
 
 =head1 RuledValidator GENERAL IDEA
 
@@ -751,7 +768,7 @@ If you don't specify any plugins, all plugins will be loaded.
 
 You can specify which filter plugins you want to load.
 
- use Data::RuledValdiator plugin => [qw/XXX/];
+ use Data::RuledValdiator filter => [qw/XXX/];
 
 If you don't specify any filter plugins, all filter plugins will be loaded.
 
@@ -849,9 +866,7 @@ if you want to disable this, set 0 or empty value as following.
 
 This is for I<"filter * with ..."> sentence in L</"FILTERS"> and when C<filter_replace> is true,
 this filter sentence apply filter all values of keys which are returned by C<key_method>.
-If you disable this, the values applyed filter are only keys in which are rule.
-
-If you disable this, the values which is defined in rule file.
+When you disable this(you set key_method => 0), the values applyed filter are only keys which are in rule.
 
 =back
 
@@ -1680,11 +1695,9 @@ I have to do more test.
 
 =item More documents
 
-=item filter plugin feature
+I have to write more documents.
 
 =item multiple rule files
-
-I have to write more documents.
 
 =back
 

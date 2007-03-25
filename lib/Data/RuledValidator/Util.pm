@@ -18,7 +18,7 @@ sub _vand{
   foreach my $v (@$val){
     my $_ok = 1;
     if($_ok = $sub->($self, $v) ? 1 : 0){
-      push @{$self->{rigth}->{"${key}_$c"} ||= []},  $v;
+      push @{$self->{right}->{"${key}_$c"} ||= []},  $v;
     }else{
       push @{$self->{wrong}->{"${key}_$c"} ||= []},  $v;
     }
@@ -34,7 +34,7 @@ sub _vor{
   foreach my $v (@$val){
     my $_ok = 0;
     if($_ok = $sub->($self, $v) ? 1 : 0){
-      push @{$self->{rigth}->{"${key}_$c"} ||= []},  $v;
+      push @{$self->{right}->{"${key}_$c"} ||= []},  $v;
     }else{
       push @{$self->{wrong}->{"${key}_$c"} ||= []},  $v;
     }

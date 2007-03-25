@@ -1,5 +1,4 @@
-Data-RuledValidator version 0.06
-================================
+Data-RuledValidator
 
 Data::RuledValidator is validator of data.
 This needs rule which is readable by not programmer,

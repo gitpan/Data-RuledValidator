@@ -1,9 +1,8 @@
 package Data::RuledValidator::Plugin::Email;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use Email::Valid;
-use Email::Valid::Loose;
 
 Data::RuledValidator->add_condition_operator
   (
