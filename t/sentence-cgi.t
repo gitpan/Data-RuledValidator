@@ -50,8 +50,8 @@ ok(! $v);
 
 # create alias
 Data::RuledValidator->create_alias_operator('isis', 'is');
-Data::RuledValidator->create_alias_cond_operator('number', 'num');
-ok(not $v->by_sentence('page is num', 'i isis num', 'v is number', 'k isis num', 'all = all of i, k, v, x'));
+Data::RuledValidator->create_alias_cond_operator('number2', 'num');
+ok(not $v->by_sentence('page is num', 'i isis num', 'v is number2', 'k isis num', 'all = all of i, k, v, x'));
 ok(not $v->ok('page_isis'));
 ok($v->ok('i_isis'));
 ok(not $v->ok('k_isis'));

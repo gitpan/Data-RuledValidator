@@ -4,7 +4,7 @@ use Data::RuledValidator::Util;
 use strict;
 use warnings qw/all/;
 
-our $VERSION = 0.04;
+our $VERSION = 0.05;
 
 my $parent = 'Data::RuledValidator';
 
@@ -123,6 +123,16 @@ use constant
       }
       return  sub{my($self, $v) = @_; _vand($self, $key, $c, $v, $sub)};
     },
+    LENGTH => sub {
+      my($key, $c, $op) = @_;
+      my($start, $end) = split(/,/, $c);
+      my $sub = sub{
+        my($self, $v) = @_;
+        my $l = length($v);
+        return defined $end ? ($start <= $l and $l <= $end) : $l <= $start;
+      };
+      return  sub{my($self, $v) = @_; _vand($self, $key, $c, $v, $sub)};
+    },
     BETWEEN => sub {
       my($key, $c, $op) = @_;
       my $sub;
@@ -194,6 +204,7 @@ $parent->add_operator
    'arent'     => ARENT,
    're'        => MATCH,
    'match'     => MATCH,
+   'length'    => LENGTH,
    '>'         => GT,
    '>='        => GT,
    '<'         => LT,

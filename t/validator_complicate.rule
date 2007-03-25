@@ -37,6 +37,7 @@ must_lt_1000 < 1000
 must_in_1_10 between 1,10
 
 length_in_10 <= ~ 10
+length_in_10 length 10
 
 regex        match ^abc, def$, ^abcdef$
 filter first_name, last_name with trim

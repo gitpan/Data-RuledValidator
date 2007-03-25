@@ -1,6 +1,6 @@
 package Data::RuledValidator;
 
-our $VERSION = '0.08';
+our $VERSION = '0.09';
 
 use strict;
 use warnings "all";
@@ -1309,13 +1309,13 @@ See also L<Data::RuledValidator::Filter>
 
  key is mail
  key is word
- key is number
+ key is num
 
 'is' is something special operator.
 It can be to be unavailable GLOBAL at all or about some key.
 
  ;;GLOBAL
- i is number
+ i is num
  k is value
 
  ;;index
@@ -1460,6 +1460,21 @@ code;
 If key's value is NOT as same as STRING, it is valid.
 You can use special string like "eq" in above explanation.
 
+=item length #,#
+
+ words length 0, 10
+
+If the length of words is from 0 to 10, it is valid.
+The first number is min length, and the second number is max length.
+
+You can write only one value.
+
+ words length 5
+
+This means length of words lesser than 6.
+
+Note that: use it instead of '> ~ #', '< ~ #' and 'between ~ #, #'.
+
 =item E<gt>, E<gt>=
 
  key > 4
@@ -1471,6 +1486,8 @@ If you want to check length of the value,
 put '~' before number as following.
 
  key > ~ 4
+
+Note that: use C<length>, instead of '>= ~ #'.
 
 =item E<lt>, E<lt>=
 
@@ -1484,6 +1501,8 @@ put '~' before number as following.
 
  key < ~ 4
 
+Note that: use C<length>, instead of '<= ~ #'.
+
 =item between #,#
 
  key between 3,5
@@ -1494,6 +1513,8 @@ If you want to check length of the value,
 put '~' before number as following.
 
  key between ~ 4,10
+
+Note that: use C<length>, instead of 'between ~ #, #'.
 
 =back
 
