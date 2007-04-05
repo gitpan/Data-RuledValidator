@@ -1,5 +1,9 @@
 Revision history for Perl extension Data::RuledValidator.
 
+0.10 Thu Apr  5 22:57
+	- add method to access internal class vars.
+        - add method add_condition. use this instead of add_condition_operator.
+
 0.09 Mon Mar 26 02:03
         - add operator length
           use it instead of key <= ~ #, key >= ~ # and between #, #

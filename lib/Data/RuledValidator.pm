@@ -1,6 +1,6 @@
 package Data::RuledValidator;
 
-our $VERSION = '0.09';
+our $VERSION = '0.10';
 
 use strict;
 use warnings "all";
@@ -113,7 +113,7 @@ sub add_operator{
   }
 }
 
-sub add_condition_operator{
+sub add_condition{
   my($self, %op_sub) = @_;
   while(my($op, $sub) = each %op_sub){
     if(defined $COND_OP{$op}){
@@ -122,6 +122,8 @@ sub add_condition_operator{
     $COND_OP{$op} = $sub;
   }
 }
+
+sub add_condition_operator{ my $self = shift; $self->add_condition(@_); }
 
 sub create_alias_operator{
   my($self, $alias, $original) = @_;
@@ -603,14 +605,30 @@ sub _parse_rule{
   }
 }
 
-sub ok{ return shift()->{result}->{shift()}}
+sub ok{ return shift()->{result}->{shift()} }
 
-sub valid_ok{ return shift()->{result}->{shift() . '_valid'}}
+sub valid_ok{ return shift()->{result}->{shift() . '_valid'} }
 
 sub valid_yet{
   my($self, $alias) = @_;
   return 0 if exists $self->{result}->{$alias . '_valid'};
   return 1;
+}
+
+sub __condition{
+  my($self, $name, $func) = @_;
+  return
+    @_ == 3                ? $COND_OP{$name} = $func :
+    exists $COND_OP{$name} ? $COND_OP{$name}         :
+    Carp::croak( $name . ' is not defined condition name');
+}
+
+sub __operator{
+  my($self, $name, $func) = @_;
+  return
+    @_ == 3                   ? $MK_CLOSURE{$name} = $func :
+    exists $MK_CLOSURE{$name} ? $MK_CLOSURE{$name}         :
+    Carp::croak( $name . ' is not defined operator name');
 }
 
 use Data::RuledValidator::Closure;
@@ -1253,13 +1271,13 @@ There are two ways how to filter values.
 
  filter tel_number with no_dash
  tel_number is num
- tel_number < ~ 10
+ tel_number length 9
 
 This declaration is no relation with location.
 So, following is as same mean as above.
 
  tel_number is num
- tel_number < ~ 10
+ tel_number length 9
  filter tel_number with no_dash
 
 Filter is also inherited from GLOBAL.
@@ -1267,7 +1285,7 @@ If you want to ignore GLOBAL filter, do as following;
 
  filter tel_number with n/a
 
-If you want to ignore GLOBAL filter on all key, do as following;
+If you want to ignore GLOBAL filter on all keys, do as following;
 (not yet implemented)
 
  filter * with n/a
@@ -1471,9 +1489,9 @@ You can write only one value.
 
  words length 5
 
-This means length of words lesser than 6.
+This means the length of words is lesser than 6.
 
-Note that: use it instead of '> ~ #', '< ~ #' and 'between ~ #, #'.
+Note that: use it instead of '>= ~ #', '<= ~ #' and 'between ~ #, #'.
 
 =item E<gt>, E<gt>=
 
@@ -1599,14 +1617,14 @@ This is the code to return closure. To closure, 5 values are given.
 
 In example, first 2 values is used.
 
-=item add_condition_operator
+=item add_condition
 
- Data::RuledValidator->add_condition_operator(name => $code);
+ Data::RuledValidator->add_condition(name => $code);
 
 $code should be code ref.
 For example:
 
-__PACKAGE__->add_condition_operator
+__PACKAGE__->add_condition
   (
    'mail'     => sub{my($self, $v) = @_; return Email::Valid->address($v) ? 1 : 0},
   );
@@ -1628,7 +1646,7 @@ for example:
  use Email::Valid;
  use Email::Valid::Loose;
  
- Data::RuledValidator->add_condition_operator
+ Data::RuledValidator->add_condition
    (
     'mail' =>
     sub{
