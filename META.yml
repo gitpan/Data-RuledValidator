@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Data-RuledValidator
-version:            0.11
+version:            0.12
 abstract:           data validator with rule
 author:
     - Ktat <ktat@cpan.org>
@@ -16,6 +16,7 @@ requires:
     Email::Valid::Loose:  0.04
     File::Slurp:          0.01
     List::MoreUtils:      0
+    Module::Pluggable:    0
     Test::Base:           0
     UNIVERSAL::require:   0
 no_index:
