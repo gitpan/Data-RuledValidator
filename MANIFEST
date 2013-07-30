@@ -27,3 +27,4 @@ lib/Data/RuledValidator/Plugin/Core.pm
 lib/Data/RuledValidator/Plugin/Email.pm
 lib/Data/RuledValidator/Plugin/EmailLoose.pm
 META.yml                                 Module meta-data (added by MakeMaker)
+META.json                                Module JSON meta-data (added by MakeMaker)
